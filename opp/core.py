@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import pytz
+from copy import deepcopy
 import enum
 import os
 import yaml
@@ -8,20 +10,46 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 
 
-default_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+# Configuration
+
+DEFAULT_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "default_settings.yml")
 
-cfg = os.environ.get("OPP_CONFIG", default_cfg)
+CFG = os.environ.get("OPP_CONFIG", DEFAULT_CFG)
 
-with open(cfg, "r") as f:
-    settings = yaml.safe_load(f.read())
+with open(CFG, "r") as f:
+    SETTINGS = yaml.safe_load(f.read())
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_DATABASE_URI"] = settings["database"]["uri"]
+app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
+
+
+# Template formatters
+
+def format_datetime(dt, fmt="ymd"):
+    """
+    Format a date time object for the jinja templates
+    """
+    formats = {
+        "ymd": "%Y-%m-%d",
+        "rfc822": "%a, %d %b %Y %H:%M:%S %z"
+    }
+    dt = pytz.timezone("utc").localize(dt)
+    local = pytz.timezone(SETTINGS["configuration"]["timezone"])
+    return dt.astimezone(local).strftime(formats[fmt])
+
+
+def format_episode_keywords(kws):
+    return ",".join([kw.word for kw in kws])
+
+
+app.jinja_env.filters["datetime"] = format_datetime
+app.jinja_env.filters['episode_keywords'] = format_episode_keywords
+
+# Database tables
 
 db = SQLAlchemy(app)
-
 episode_keywords = db.Table(
     "episode_keywords",
     db.Column("episode_id", db.Integer, db.ForeignKey("episode.item_id"),
@@ -54,14 +82,13 @@ class AudioFormat(enum.Enum):
 
 class AudioFile(db.Model):
     item_id = db.Column(db.Integer, primary_key=True)
-    file_name = db.Column(db.String(256), unique=True)
+    file_name = db.Column(db.String(256), unique=True, index=True)
     audio_format = db.Column(db.Enum(AudioFormat))
     length = db.Column(db.Integer)
     duration = db.Column(db.String(8))
     episode_id = db.Column(db.Integer, db.ForeignKey("episode.item_id"))
     episode = db.relationship("Episode",
                               backref=db.backref("audio_file", uselist=False))
-    # link ?
 
     def __repr__(self):
         return "<AudioFile %s>" % self.file_name
@@ -78,7 +105,14 @@ class Keyword(db.Model):
         return "<Keyword %s>" % self.word
 
 
+# Web routes
+
 @app.route("/podcast.xml")
 def rss():
     episodes = Episode.query.order_by(Episode.published.desc()).all()
-    return render_template("podcast.xml", site=settings["site"], episodes=episodes)
+    podcast = deepcopy(SETTINGS["podcast"])
+
+    if len(episodes) > 0:
+        podcast["published"] = episodes[0].published
+
+    return render_template("podcast.xml", podcast=podcast, episodes=episodes)
