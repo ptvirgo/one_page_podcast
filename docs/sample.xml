@@ -43,7 +43,7 @@
             <description>
                 The full length episode 2 description
             </description>
-            <enclosure url="http://podcasts.example.com/episode.mp4" length="36715125" ="audio/mpeg"/>
+            <enclosure url="http://podcasts.example.com/episode.mp4" length="36715125" type="audio/mpeg"/>
             <guid>
                 http://podcast.example.com/episode2.mp4
             </guid>

@@ -1,0 +1,18 @@
+database:
+    uri: sqlite:///opp.sqlite
+site:
+    title: One Page Podcast
+    subtitle: An excellent new Podcast!
+    description: This is a new Podcast. It hasn't even settled on a description!
+    image: n/a
+    link: www.example.com
+    author: Yours Truly
+    email: contact@example.com
+    location: New York, NY
+    language: en-us
+    explicit: no
+    rating: TV-PG
+    keywords:
+        - podcast
+    category: Speaking
+    frequency: Weekly

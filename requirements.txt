@@ -1,3 +1,4 @@
+pyyaml >= 5.1.0
 Flask >= 1.1.1
 Flask-SQLAlchemy >= 2.4.0
 factory-boy >= 2.12.0

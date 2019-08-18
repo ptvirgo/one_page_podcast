@@ -1,0 +1,66 @@
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:rawvoice="http://www.rawvoice.com/rawvoiceRssModule/" version="2.0">
+    <channel>
+        <title>{{ site.title }}</title>
+        <link>{{ site.link }}</link>
+        <image>
+            <url>{{ site.image }}</url>
+            <title>{{ site.title }}</title>
+            <link>{{ site.link }}</link>
+        </image>
+        <description>
+            {{ site.description }}
+        </description>
+        <language>{{ site.language }}</language>
+        <copyright>{{ site.copyright }}</copyright>
+        <atom:link href="{{ site.rss }}" rel="self" type="application/rss+xml"/>
+        <lastBuildDate>{{ site.published }}</lastBuildDate>
+        <itunes:author>{{ site.author }}</itunes:author>
+        <itunes:summary>
+            {{ site.description }}
+        </itunes:summary>
+        <itunes:subtitle>{{ site.subtitle }}</itunes:subtitle>
+        <itunes:owner>
+            <itunes:name>{{ site.author }}</itunes:name>
+            <itunes:email>{{ site.email }}</itunes:email>
+        </itunes:owner>
+        <itunes:explicit>{{ site.explicit }}</itunes:explicit>
+        <itunes:keywords>
+            {{ ",".join(site.keywords) }}
+        </itunes:keywords>
+        <itunes:image href="{{ site.image }}"/>
+        <rawvoice:rating>{{ site.rating }}</rawvoice:rating>
+        <rawvoice:location>{{ site.location }}</rawvoice:location>
+        <rawvoice:frequency>{{ site.frequency }}</rawvoice:frequency>
+        <itunes:category text="{{ site.category }}"/>
+        <pubDate>{{ site.published }}</pubDate>
+
+        {% for episode in episodes %}
+        <item>
+            <title>{{ episode.title }}</title>
+            <link>
+                {{ episode.link }}
+            </link>
+            <pubDate>{{ episode.published }}</pubDate>
+            <description>
+                {{ episode.description }}
+            </description>
+            <enclosure url="{{ episode.audio_file.link }}" length="{{ episode.audio_file.length }}" type="{{ episode.audio_file.audio_format.value }}"/>
+            <guid>
+                {{ episode.link }}
+            </guid>
+            <itunes:duration>{{ episode.audio_file.duration }}</itunes:duration>
+            <itunes:summary>
+                {{ episode.description }}
+            </itunes:summary>
+            {% if episode.image %}
+            <itunes:image href="{{ episode.image }}"/>
+            {% endif %}
+            <itunes:keywords>
+                {% for kw in episode.keywords %}{% if loop.index > 1 %},{% endif %}{{ kw.word }}{% endfor %}
+            </itunes:keywords>
+            <itunes:explicit>{% if episode.explicit %}yes{% else %}no{% endif %}</itunes:explicit>
+        </item>
+        {% endfor %}
+
+    </channel>
+</rss>

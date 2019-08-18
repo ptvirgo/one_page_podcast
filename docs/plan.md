@@ -12,6 +12,25 @@ Ideally:
 
 https://www.thepolyglotdeveloper.com/2016/02/create-podcast-xml-feed-publishing-itunes/
 
+## Site-wide Data
+- title
+- subtitle
+- description
+- image
+- link (to home page)
+
+- author
+- email
+- location
+
+- language
+- eplicit
+- rating
+- keywords
+- category
+- frequency
+
+
 ## Per-episode data, for the database
 
 - title
