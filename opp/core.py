@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import pytz
 from copy import deepcopy
+from datetime import datetime
 import enum
 import os
+import pytz
 import yaml
 
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -44,8 +45,16 @@ def format_episode_keywords(kws):
     return ",".join([kw.word for kw in kws])
 
 
+def format_audio_file_duration(time):
+        hours = time // (60 * 60)
+        minutes = (time - (hours * 60 * 60)) // 60
+        seconds = (time - (hours * 60 * 60)) - (minutes * 60)
+        return "%02d:%02d:%02d" % (hours, minutes, seconds)
+
+
 app.jinja_env.filters["datetime"] = format_datetime
 app.jinja_env.filters['episode_keywords'] = format_episode_keywords
+app.jinja_env.filters['duration'] = format_audio_file_duration
 
 # Database tables
 
@@ -74,10 +83,9 @@ class Episode(db.Model):
 
 
 class AudioFormat(enum.Enum):
-    mp3 = "audio/mpeg"
-    mp4 = "audio/mp4"
-    ogg = "audio/ogg"
-    opus = "audio/opus"
+    MP3 = "audio/mpeg"
+    OggVorbis = "audio/ogg"
+    OggOpus = "audio/ogg"  # not a typo
 
 
 class AudioFile(db.Model):
@@ -85,10 +93,11 @@ class AudioFile(db.Model):
     file_name = db.Column(db.String(256), unique=True, index=True)
     audio_format = db.Column(db.Enum(AudioFormat))
     length = db.Column(db.Integer)
-    duration = db.Column(db.String(8))
-    episode_id = db.Column(db.Integer, db.ForeignKey("episode.item_id"))
-    episode = db.relationship("Episode",
-                              backref=db.backref("audio_file", uselist=False))
+    duration = db.Column(db.Integer)
+    episode_id = db.Column(
+        db.Integer, db.ForeignKey("episode.item_id", ondelete="CASCADE"))
+    episode = db.relationship("Episode", backref=db.backref(
+        "audio_file", uselist=False, cascade="all, delete-orphan"))
 
     def __repr__(self):
         return "<AudioFile %s>" % self.file_name
@@ -109,10 +118,23 @@ class Keyword(db.Model):
 
 @app.route("/podcast.xml")
 def rss():
+    """
+    Produce the podcast xml
+    """
     episodes = Episode.query.order_by(Episode.published.desc()).all()
     podcast = deepcopy(SETTINGS["podcast"])
 
     if len(episodes) > 0:
         podcast["published"] = episodes[0].published
+    else:
+        podcast["published"] = datetime.utcnow()
 
-    return render_template("podcast.xml", podcast=podcast, episodes=episodes)
+    return render_template("podcast.xml", podcast=podcast, episodes=episodes,
+                           mimetype="application/rss+xml")
+
+
+@app.route("/media/<path:filename>")
+def media(filename):
+    return send_from_directory(
+        SETTINGS["configuration"]["directories"]["media"],
+        filename, as_attachment=False)

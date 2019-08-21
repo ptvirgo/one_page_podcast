@@ -47,7 +47,7 @@
             <guid>
                 {{ podcast.link }}/media/{{ episode.audio_file.file_name }}
             </guid>
-            <itunes:duration>{{ episode.audio_file.duration }}</itunes:duration>
+            <itunes:duration>{{ episode.audio_file.duration|duration }}</itunes:duration>
             <itunes:summary>
                 {{ episode.description }}
             </itunes:summary>

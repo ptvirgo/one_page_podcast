@@ -29,17 +29,12 @@ class AudioFileFactory(factory.Factory):
 
     audio_format = factory.fuzzy.FuzzyChoice(AudioFormat)
     length = factory.fuzzy.FuzzyInteger(1000, 10000)
+    duration = factory.fuzzy.FuzzyInteger(30, 900)
 
     @factory.lazy_attribute
     def file_name(self):
         return factory.Faker("file_name",
                              extension=self.audio_format.name).generate()
-
-    @factory.lazy_attribute
-    def duration(self):
-        minutes = self.length // 60
-        seconds = self.length % 60
-        return "%02d:%02d" % (minutes, seconds)
 
 
 class KeywordFactory(factory.Factory):
