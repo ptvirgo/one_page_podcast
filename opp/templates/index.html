@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ podcast.title }}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="alternate" type="application/rss+xml" href="{{ url_for('rss') }}" />
+        <link href="https://fonts.googleapis.com/css?family=PT+Sans|Saira+Condensed&display=swap" rel="stylesheet">
+    </head>
+    <body>
+
+        <header>
+            <img src="{{ url_for('static', filename=podcast.image) }}" alt="Podcast intro image" id="podcast-image"/>
+            <h1 id="podcast-title">{{ podcast.title }}</h1>
+            <a href="{{ url_for('rss') }}"><img src="{{ url_for('static', filename='rss-icon.svg') }}" alt="rss icon" id="rss-icon"/></a>
+        </header>
+
+        <h2 id="subtitle">{{ podcast.subtitle }}</h2>
+        <div class="description">
+        {{ podcast.description|markdown|safe }}
+        </div>
+
+        <main>
+        <h2>Episodes</h2>
+        {% for episode in episodes %}
+        <article>
+            <h3>{{ episode.title }}</h3>
+            {% if episode.image %}
+            <img src="{{ url_for('static', filename=episode.image) }}" class="episode"/>
+            {% endif %}
+            <aside>
+                <p><strong>Date:</strong> {{ episode.published|datetime }}</p>
+                <p><strong>Run time:</strong> {{ episode.audio_file.duration|duration }}</p>
+            {% if episode.keywords %}<p><strong>Keywords:</strong>{{ episode.keywords|episode_keywords }}</p>{% endif %}
+            </aside>
+            <div class="description">{{ episode.description|markdown|safe }}</div>
+            {% if episode.explicit %}<p class="explicit">Contains explicit content.</p>{% endif %}
+            <audio controls>
+                <source src="{{ url_for('media', filename=episode.audio_file.file_name) }}" type="{{ episode.audio_file.audio_format.value }}"/>
+            </audio>
+
+        </article>
+        {% endfor %}
+        </main>
+
+    </body>
+</html>

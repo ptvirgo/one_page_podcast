@@ -3,6 +3,7 @@
 from copy import deepcopy
 from datetime import datetime
 import enum
+import markdown
 import os
 import pytz
 import yaml
@@ -21,7 +22,10 @@ CFG = os.environ.get("OPP_CONFIG", DEFAULT_CFG)
 with open(CFG, "r") as f:
     SETTINGS = yaml.safe_load(f.read())
 
-app = Flask(__name__)
+app = Flask(__name__,
+            template_folder=SETTINGS["configuration"]["directories"]["template"],
+            static_folder=SETTINGS["configuration"]["directories"]["static"])
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
 
@@ -34,27 +38,38 @@ def format_datetime(dt, fmt="ymd"):
     """
     formats = {
         "ymd": "%Y-%m-%d",
-        "rfc822": "%a, %d %b %Y %H:%M:%S %z"
-    }
+        "rfc822": "%a, %d %b %Y %H:%M:%S %z"}
     dt = pytz.timezone("utc").localize(dt)
     local = pytz.timezone(SETTINGS["configuration"]["timezone"])
     return dt.astimezone(local).strftime(formats[fmt])
 
 
 def format_episode_keywords(kws):
+    """
+    Convert a list of Keyword objects to a comma separated string of the words
+    """
     return ",".join([kw.word for kw in kws])
 
 
-def format_audio_file_duration(time):
-        hours = time // (60 * 60)
-        minutes = (time - (hours * 60 * 60)) // 60
-        seconds = (time - (hours * 60 * 60)) - (minutes * 60)
+def format_duration(time):
+    """Format an AudioFile duration"""
+    hours = time // (60 * 60)
+    minutes = (time - (hours * 60 * 60)) // 60
+    seconds = (time - (hours * 60 * 60)) - (minutes * 60)
+
+    if hours > 0:
         return "%02d:%02d:%02d" % (hours, minutes, seconds)
+
+    if minutes > 0:
+        return "%02d:%02d" % (minutes, seconds)
+
+    return "%02d" % seconds
 
 
 app.jinja_env.filters["datetime"] = format_datetime
-app.jinja_env.filters['episode_keywords'] = format_episode_keywords
-app.jinja_env.filters['duration'] = format_audio_file_duration
+app.jinja_env.filters["episode_keywords"] = format_episode_keywords
+app.jinja_env.filters["duration"] = format_duration
+app.jinja_env.filters["markdown"] = markdown.markdown
 
 # Database tables
 
@@ -116,15 +131,28 @@ class Keyword(db.Model):
 
 # Web routes
 
+@app.route("/")
+def home():
+    """
+    Produce the main page
+    """
+    episodes = Episode.query.order_by(Episode.published.desc()).filter(
+        Episode.published < datetime.utcnow())
+    podcast = deepcopy(SETTINGS["podcast"])
+
+    return render_template("index.html", podcast=podcast, episodes=episodes)
+
+
 @app.route("/podcast.xml")
 def rss():
     """
     Produce the podcast xml
     """
-    episodes = Episode.query.order_by(Episode.published.desc()).all()
+    episodes = Episode.query.order_by(Episode.published.desc()).filter(
+        Episode.published < datetime.utcnow())
     podcast = deepcopy(SETTINGS["podcast"])
 
-    if len(episodes) > 0:
+    if episodes.count() > 0:
         podcast["published"] = episodes[0].published
     else:
         podcast["published"] = datetime.utcnow()

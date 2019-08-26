@@ -93,14 +93,15 @@ def create_episode(args):
         description=args.description,
         explicit=args.explicit)
 
-    for word in args.keywords:
-        word = clean(word)
-        kw = Keyword.query.filter_by(word=word).first()
+    if args.keywords is not None:
+        for word in args.keywords:
+            word = clean(word)
+            kw = Keyword.query.filter_by(word=word).first()
 
-        if kw is None:
-            kw = Keyword(word=word)
+            if kw is None:
+                kw = Keyword(word=word)
 
-        episode.keywords.append(kw)
+            episode.keywords.append(kw)
 
     with open(args.file, "rb") as f:
         new_name = clean(os.path.basename(args.file))

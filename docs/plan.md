@@ -77,3 +77,45 @@ https://www.thepolyglotdeveloper.com/2016/02/create-podcast-xml-feed-publishing-
 ### keywords
 - id
 - keyword
+
+
+## User layout
+
+/templates/
+    - /podcast.xml (rss template)
+    - /index.html (html home page template)
+    - /admin/index.html (list & select episodes)
+    - /admin/episode.html (edit individual episode)
+
+/settings.yml (site settings)
+/media/ (episode audio files and images)
+/static/
+    - style.css (styling)
+    - javascripts ...
+
+## Template tags
+
+podcast
+    - title
+    - link
+    - image
+    - language
+    - copyright
+    - published (|datetime("rfc822")
+    - author
+    - description
+    - subtitle
+    - email
+    - explicit
+    - keywords
+
+episodes (list of):
+    - title
+    - audio_file
+        - file_name
+        - duration (|duration)
+        - description
+        - image (optional)
+        - keywords (|episode_keywords)
+        - explicit
+        - audio_format.value

@@ -4,7 +4,7 @@
         <link>{{ podcast.link }}</link>
         {% if podcast.image %}
         <image>
-            <url>{{ podcast.link }}/media/{{ podcast.image }}</url>
+            <url>{{ url_for('static', filename=podcast.image, _external=True) }}</url>
             <title>{{ podcast.title }}</title>
             <link>{{ podcast.link }}</link>
         </image>
@@ -14,7 +14,7 @@
         </description>
         <language>{{ podcast.language }}</language>
         <copyright>{{ podcast.copyright }}</copyright>
-        <atom:link href="{{ podcast.link }}/podcast.xml" rel="self" type="application/rss+xml"/>
+        <atom:link href="{{ url_for('rss') }}" rel="self" type="application/rss+xml"/>
         <lastBuildDate>{{ podcast.published|datetime("rfc822") }}</lastBuildDate>
         <itunes:author>{{ podcast.author }}</itunes:author>
         <itunes:summary>
@@ -29,7 +29,7 @@
         <itunes:keywords>
             {{ ",".join(podcast.keywords) }}
         </itunes:keywords>
-        <itunes:image href="{{ podcast.link }}/media/{{ podcast.image }}"/>
+        <itunes:image href="{{ url_for('static', filename=podcast.image, _external=True) }}"/>
         <itunes:category text="{{ podcast.category }}"/>
         <pubDate>{{ podcast.published|datetime("rfc822") }}</pubDate>
 
@@ -37,22 +37,22 @@
         <item>
             <title>{{ episode.title }}</title>
             <link>
-                {{ podcast.link }}/media/{{ episode.audio_file.file_name }}
+                {{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}
             </link>
             <pubDate>{{ episode.published|datetime("rfc822") }}</pubDate>
             <description>
                 {{ episode.description }}
             </description>
-            <enclosure url="{{ podcast.link }}/media/{{ episode.audio_file.file_name }}" length="{{ episode.audio_file.length }}" type="{{ episode.audio_file.audio_format.value }}"/>
+            <enclosure url="{{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}" length="{{ episode.audio_file.length }}" type="{{ episode.audio_file.audio_format.value }}"/>
             <guid>
-                {{ podcast.link }}/media/{{ episode.audio_file.file_name }}
+                {{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}
             </guid>
             <itunes:duration>{{ episode.audio_file.duration|duration }}</itunes:duration>
             <itunes:summary>
                 {{ episode.description }}
             </itunes:summary>
             {% if episode.image %}
-            <itunes:image href="{{ podcast.link }}/media/{{ episode.image }}"/>
+            <itunes:image href="{{ url_for('media', filename=episode.image, _external=True) }}"/>
             {% endif %}
             <itunes:keywords>
                 {{ episode.keywords|episode_keywords }}

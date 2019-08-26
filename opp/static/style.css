@@ -1,0 +1,88 @@
+body {
+    background-color: #ddd;
+    color: #222;
+    font-family: 'PT Sans', sans-serif;
+    font-size: 14pt;
+    margin: 1em auto;
+    max-width: 120ex;
+    padding: 0 5%;
+}
+
+header {
+    align-items: center;
+    background-color: #222;
+    border-radius: .5ex;
+    color: #eee;
+    display: flex;
+    justify-content: space-between;
+    padding: .25em 1ex;
+}
+
+header img {
+    height: 32pt;
+    width: 32pt;
+    margin 0 1ex;
+}
+
+header h1 {
+    font-size: 32pt;
+    margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Saira Condensed Black', sans-serif;
+}
+
+h1, h2 {
+    margin: 1em 0 0 0;
+}
+
+h3, p {
+    margin: 0 0 .5em 0;
+}
+
+a {
+    color: #f60;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a:visited {
+    color: #f90;
+}
+
+a:hover {
+    color: #fc0;
+}
+
+article {
+    background-color: #eee;
+    border-radius: .5ex;
+    margin: 0 0 2em 0;
+    padding: .5em 1ex;
+}
+
+article img.episode {
+    float: left;
+}
+
+article aside {
+    border-left: 1px solid #222;
+    float: right;
+    max-width: 35ex;
+    margin: 0 0 1em 1ex;
+    padding-left: 2ex;
+}
+
+article aside p {
+    margin: 0;
+}
+
+audio {
+    border-radius: .5ex;
+    width: 100%;
+}
+
+main {
+    clear: both;
+}

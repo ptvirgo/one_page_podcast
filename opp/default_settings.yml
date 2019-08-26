@@ -1,23 +1,27 @@
 # Sensitive
 configuration:
     admin:
-        username: auth
-        password: you'd better change this
+        username: Not yet used
+        password: Not yet used
     database_uri: sqlite:///opp.sqlite
     directories:
-        templates: templates
         media: media
+        static: static
+        template: templates
     timezone: US/Eastern
 
 # Public
 podcast:
     title: One Page Podcast
-    subtitle: An excellent new Podcast!
-    description: This is a new Podcast. It hasn't even settled on a description!
-    image: opp.jpg
-    link: http://www.example.com
+    subtitle: A podcast on a single page
+    description: |-
+        You want to host your own podcast.  You don't need *anything* else.
+
+        Boom.
+    image: rss.png
+    link: http://example.com
     author: Yours Truly
-    email: contact@example.com
+    email: yt@example.com
     language: en-us
     explicit: no
     keywords:
