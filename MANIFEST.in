@@ -1,6 +1,0 @@
-include opp_manage.py requirements.txt
-recursive-include tests/*.py
-include opp/*py
-recursive-include opp/default_settings.yml
-recursive-include opp/static/*
-recursive-include opp/templates/*

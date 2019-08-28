@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name="one_page_podcast",
@@ -7,6 +7,8 @@ setup(
     author="Pablo Virgo",
     author_email="mailbox@pablovirgo.com",
     url="https://github.com/ptvirgo/one_page_podcast",
-    packages=["opp"],
-    scripts=["opp_manage.py"]
+    packages=find_packages(),
+    scripts=["opp_manage.py"],
+    include_package_data=True,
+    package_data={"opp": ["*.yml", "templates/*", "static/*"]}
     )
