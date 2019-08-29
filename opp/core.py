@@ -8,7 +8,7 @@ import os
 import pytz
 import yaml
 
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, Response, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -157,8 +157,9 @@ def rss():
     else:
         podcast["published"] = datetime.utcnow()
 
-    return render_template("podcast.xml", podcast=podcast, episodes=episodes,
-                           mimetype="application/rss+xml")
+    content = render_template("podcast.xml", podcast=podcast,
+                              episodes=episodes)
+    return Response(content, content_type="application/rss+xml")
 
 
 @app.route("/media/<path:filename>")
