@@ -15,7 +15,7 @@ podcast:
     title: One Page Podcast
     subtitle: A podcast on a single page
     description: |-
-        You want to host your own podcast.  You don't need *anything* else.
+        You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).  You don't need *anything* else.
 
         Boom.
     image: rss.png

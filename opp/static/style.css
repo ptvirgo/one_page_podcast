@@ -11,7 +11,7 @@ body {
 header {
     align-items: center;
     background-color: #222;
-    border-radius: .5ex;
+    border-radius: 1ex;
     color: #eee;
     display: flex;
     justify-content: space-between;
@@ -52,7 +52,17 @@ a:visited {
 }
 
 a:hover {
-    color: #fc0;
+    color: #f60;
+}
+
+div.description a, main a {
+    display: inline-block;
+    border-radius: .5ex;
+    padding: 1pt;
+}
+
+div.description a:hover, main a:hover {
+    background-color: #fff;
 }
 
 article {
