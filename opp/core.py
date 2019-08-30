@@ -8,9 +8,12 @@ import os
 import pytz
 import yaml
 
-from flask import Flask, Response, render_template, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from flask_jwt_simple import JWTManager, jwt_required, create_jwt, \
+     get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
 
+from .helpers import random_text
 
 # Configuration
 
@@ -28,6 +31,8 @@ app = Flask(__name__,
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
+app.config['JWT_SECRET_KEY'] = random_text(32)
+JWT = JWTManager(app)
 
 
 # Template formatters
@@ -131,6 +136,8 @@ class Keyword(db.Model):
 
 # Web routes
 
+# - Front end for users
+
 @app.route("/")
 def home():
     """
@@ -167,3 +174,27 @@ def media(filename):
     return send_from_directory(
         SETTINGS["configuration"]["directories"]["media"],
         filename, as_attachment=False)
+
+
+# - Administrative
+
+@app.route('/login', methods=['POST'])
+def login():
+    """
+    Allow site administrator to log in
+    """
+    if not request.is_json:
+        return jsonify({"msg": "Invalid JSON"}), 400
+
+    params = request.get_json()
+    username = params.get('username')
+    password = params.get('password')
+
+    if username is None or password is None:
+        return jsonify({"msg": "Missing credentials"}), 400
+
+    if username != SETTINGS["configuration"]["admin"]["username"] \
+            or password != SETTINGS["configuration"]["admin"]["password"]:
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    return jsonify({'jwt': create_jwt(identity=username)}), 200
