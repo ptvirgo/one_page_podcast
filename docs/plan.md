@@ -119,3 +119,26 @@ episodes (list of):
         - keywords (|episode_keywords)
         - explicit
         - audio_format.value
+
+
+## Admin
+
+### Create
+- /admin/episode/new GET / POST
+    - POST to create
+    - GET shows forms to fill out
+
+### Read
+- /admin/episode GET
+    - Produce link to create new episode
+    - Produce list of episodes with links to edit or delete
+
+### Update
+- /admin/episode/id GET / PUT
+    - PUT to make changes
+    - GET shows pre-filled form to fill out
+
+
+### Delete
+- /admin/episode/id DELETE
+    - Redirect to /admin/episode

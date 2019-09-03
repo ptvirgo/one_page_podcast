@@ -43,7 +43,7 @@
             <description>
                 {{ episode.description }}
             </description>
-            <enclosure url="{{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}" length="{{ episode.audio_file.length }}" type="{{ episode.audio_file.audio_format.value }}"/>
+            <enclosure url="{{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}" length="{{ episode.audio_file.length }}" type="{{ episode.audio_file.audio_format.mimetype }}"/>
             <guid>
                 {{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}
             </guid>
