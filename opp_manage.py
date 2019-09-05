@@ -87,9 +87,15 @@ def create_episode(args):
     """
     Create an episode as requested by the episode sub-command
     """
+    if args.date is None:
+        published = datetime.utcnow()
+    else:
+        year, month, day = args.date.split("-")
+        published = datetime(int(year), int(month), int(day))
+
     episode = Episode(
         title=args.title,
-        published=datetime.utcnow(),
+        published=published,
         description=args.description,
         explicit=args.explicit)
 
@@ -136,6 +142,7 @@ def add_create_command(constructor):
     parser.add_argument("--explicit", default=False, action="store_const",
                         const=True, help="Mark as explicit")
     parser.add_argument("--keywords", help="As many keywords as you need", nargs="*")
+    parser.add_argument("--date", help="Alternate date, must be YYYY-MM-DD")
     parser.set_defaults(func=create_episode)
     return parser
 
