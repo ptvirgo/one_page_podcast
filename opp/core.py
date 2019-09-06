@@ -12,8 +12,8 @@ import pytz
 import yaml
 
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
-from flask_jwt_simple import JWTManager, jwt_required, create_jwt, \
-     get_jwt_identity
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
+     get_jwt_identity, set_access_cookies, unset_jwt_cookies, config
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_wtf import FlaskForm
@@ -42,7 +42,13 @@ app = Flask(__name__,
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
 app.config["SECRET_KEY"] = random_text(32)
+
 app.config["JWT_SECRET_KEY"] = random_text(32)
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_COOKIE_SECURE"] = True
+app.config["JWT_COOKIE_CSRF_PROTECT"] = True
+app.config['JWT_ACCESS_COOKIE_PATH'] = "/admin"
+
 app.config["WTF_CSRF_ENABLED"] = False
 
 JWT = JWTManager(app)
@@ -218,9 +224,12 @@ def login():
 
     if username != SETTINGS["configuration"]["admin"]["username"] \
             or password != SETTINGS["configuration"]["admin"]["password"]:
-        return jsonify({"msg": "Invalid credentials"}), 401
+        return jsonify({"success": False, "msg": "Invalid credentials"}), 401
 
-    return jsonify({"jwt": create_jwt(identity=username)}), 200
+    token = create_access_token(identity=username)
+    resp = jsonify({"jwt": token, "success": True})
+    set_access_cookies(resp, token)
+    return resp, 200
 
 
 class CreateEpisodeForm(FlaskForm):
@@ -241,12 +250,13 @@ class CreateEpisodeForm(FlaskForm):
 
 
 @app.route("/admin/episode/new", methods=["GET", "POST"])
+@jwt_required
 def episode_create():
     """
     Allow administrator to create new episodes
     """
     if request.method == "GET":
-        raise NotImplementedError("Hang on!")
+        return render_template("admin/create.html")
 
     form = CreateEpisodeForm()
 
@@ -300,5 +310,5 @@ def episode_create():
 
         return jsonify({"success": True}), 201
 
-    app.logger.warn(form.errors)
+    app.logger.warning(form.errors)
     return jsonify({"success": False, "errors": form.errors}), 400

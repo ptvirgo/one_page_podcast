@@ -18,6 +18,7 @@ if opp.db.engine.has_table("episode"):
                        "using a test database, delete it.")
 else:
     opp.app.testing = True
+    opp.app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 
 
 class TestWithDatabase(unittest.TestCase):
@@ -25,13 +26,11 @@ class TestWithDatabase(unittest.TestCase):
     Provide TestCase framework with a fresh opp database
     """
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    def setUp(self, *args, **kwargs):
         opp.db.create_all()
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
-        super().tearDownClass(*args, **kwargs)
+    def tearDown(self, *args, **kwargs):
         opp.db.drop_all()
 
 
@@ -130,7 +129,33 @@ class TestApi(TestWithDatabase):
         """
         Return a logged in client
         """
-        return opp.app.test_client()
+        username = opp.SETTINGS["configuration"]["admin"]["username"]
+        password = opp.SETTINGS["configuration"]["admin"]["password"]
+        data = {"username": username, "password": password}
+
+        client = opp.app.test_client()
+        response = client.post(
+            "/admin/login", mimetype="application/json",
+            data=json.dumps(data))
+
+        return client
+
+    def new_episode_post_data(self, episode, audio_file):
+        """
+        Produce the expected post data for a given episode & audio file
+        """
+        data = {
+            "title": episode.title,
+            "published": datetime.fromtimestamp(episode.published.timestamp()),
+            "description": episode.description,
+            "keywords": opp.format_episode_keywords(episode.keywords),
+            "audio_file": audio_file
+        }
+
+        if episode.explicit:
+            data["explicit"] = True
+
+        return data
 
     def test_validate_audio_file(self):
         """
@@ -138,17 +163,7 @@ class TestApi(TestWithDatabase):
         """
         episode = EpisodeFactory()
         bad_data = io.BytesIO(b"this better not work")
-
-        data = {
-            "title": episode.title,
-            "published": datetime.fromtimestamp(episode.published.timestamp()),
-            "description": episode.description,
-            "keywords": opp.format_episode_keywords(episode.keywords),
-            "audio_file": bad_data
-        }
-
-        if episode.explicit:
-            data["explicit"] = True
+        data = self.new_episode_post_data(episode, bad_data)
 
         with self.logged_in_client() as client:
             response = client.post("/admin/episode/new", buffered=True, data=data,
@@ -173,22 +188,14 @@ class TestApi(TestWithDatabase):
                       msg="Factory should not have created database entry")
 
         fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
-        audio_file = open(fn, "rb")
 
-        data = {
-            "title": episode.title,
-            "published": datetime.fromtimestamp(episode.published.timestamp()),
-            "description": episode.description,
-            "keywords": opp.format_episode_keywords(episode.keywords),
-            "audio_file": audio_file
-        }
+        with open(fn, "rb") as audio_file:
+            data = self.new_episode_post_data(episode, audio_file)
 
-        if episode.explicit:
-            data["explicit"] = True
-
-        with self.logged_in_client() as client:
-            response = client.post("/admin/episode/new", buffered=True, data=data,
-                                   content_type="multipart/form-data")
+            with self.logged_in_client() as client:
+                response = client.post(
+                    "/admin/episode/new", buffered=True, data=data,
+                    content_type="multipart/form-data")
 
         # Good response?
         self.assertEqual(response.status, "201 CREATED")
@@ -207,3 +214,34 @@ class TestApi(TestWithDatabase):
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertTrue(os.path.exists(file_path))
         os.remove(file_path)
+
+    def test_create_requires_login(self):
+        """
+        Ensure that only a logged in admin can create episodes
+        """
+        # Getting the episode creation page without authentication is blocked
+        with opp.app.test_client() as client:
+            response = client.get("/admin/episode/new")
+        self.assertEqual(response.status, "401 UNAUTHORIZED")
+
+        # Posting to the create api wouthout authentication is blocked
+        episode = EpisodeFactory()
+        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
+
+        with open(fn, "rb") as audio_file:
+            data = self.new_episode_post_data(episode, audio_file)
+
+            with opp.app.test_client() as client:
+                response = client.post(
+                    "/admin/episode/new", buffered=True, data=data,
+                    content_type="multipart/form-data")
+
+        self.assertEqual(response.status, "401 UNAUTHORIZED")
+        self.assertIs(
+            opp.Episode.query.filter_by(title=episode.title).first(), None)
+
+        fn = opp.audio_file_name(data["published"], data["title"],
+                                 opp.AudioFormat.OggOpus)
+        file_path = os.path.join(
+            opp.SETTINGS["configuration"]["directories"]["media"], fn)
+        self.assertFalse(os.path.exists(file_path))
