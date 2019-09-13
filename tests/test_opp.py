@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 import json
 import os
 import unittest
+import random
 
 import opp
 
@@ -21,9 +22,9 @@ else:
     opp.app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 
 
-class TestWithDatabase(unittest.TestCase):
+class WithDatabase:
     """
-    Provide TestCase framework with a fresh opp database
+    Provide a TestCase with a prepared database
     """
     @classmethod
     def setUp(self, *args, **kwargs):
@@ -32,6 +33,25 @@ class TestWithDatabase(unittest.TestCase):
     @classmethod
     def tearDown(self, *args, **kwargs):
         opp.db.drop_all()
+
+
+class WithLoggedInClient:
+    """
+    Provide a TestCase with an authenticated client
+    """
+    def logged_in_client(self):
+        """
+        Return a logged in client
+        """
+        username = opp.SETTINGS["configuration"]["admin"]["username"]
+        password = opp.SETTINGS["configuration"]["admin"]["password"]
+        data = {"username": username, "password": password}
+
+        client = opp.app.test_client()
+        client.post("/admin/login", mimetype="application/json",
+                    data=json.dumps(data))
+
+        return client
 
 
 class TestHelpers(unittest.TestCase):
@@ -61,7 +81,7 @@ class TestFormatters(unittest.TestCase):
         self.assertEqual(opp.format_duration(3750), "01:02:30")
 
 
-class TestLogin(TestWithDatabase):
+class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     Validate routes
     """
@@ -69,13 +89,13 @@ class TestLogin(TestWithDatabase):
         """
         Make sure a correct login will work.
         """
-        login = json.dumps(dict(
-            username=opp.SETTINGS["configuration"]["admin"]["username"],
-            password=opp.SETTINGS["configuration"]["admin"]["password"]))
+        login = {
+            "username": opp.SETTINGS["configuration"]["admin"]["username"],
+            "password": opp.SETTINGS["configuration"]["admin"]["password"]
+        }
 
         with opp.app.test_client() as client:
-            res = client.post(
-                "/admin/login", data=login, content_type="application/json")
+            res = client.post("/admin/login", data=login)
 
         self.assertEqual(res.status, "200 OK")
         self.assertTrue(res.is_json)
@@ -83,17 +103,12 @@ class TestLogin(TestWithDatabase):
         self.assertIsNot(res.json.get("jwt"), None)
         self.assertIs(res.json.get("msg"), None)
 
-    def test_invalid_login_produces_401(self):
+    def prove_login_is_invalid(self, login):
         """
-        Make sure an invalid login will get a 401 response
+        Verify that given login credintials produce a 401 response
         """
-        login = json.dumps(dict(
-            username=opp.random_text(8),
-            password=opp.random_text(8)))
-
         with opp.app.test_client() as client:
-            res = client.post(
-                "/admin/login", data=login, content_type="application/json")
+            res = client.post("/admin/login", data=login)
 
         self.assertEqual(res.status, "401 UNAUTHORIZED")
         self.assertTrue(res.is_json)
@@ -101,45 +116,28 @@ class TestLogin(TestWithDatabase):
         self.assertIs(res.json.get("jwt"), None)
         self.assertEqual(res.json.get("msg"), "Invalid credentials")
 
+    def test_invalid_login_produces_401(self):
+        """
+        Make sure an invalid login will get a 401 response
+        """
+        login = {
+            "username": opp.random_text(8),
+            "password": opp.random_text(8)
+        }
+        self.prove_login_is_invalid(login)
+
     def test_login_without_credentials_produces_400(self):
         """
         Make sure a login without credentials will get a 400 response
         """
-        def validate_result(login):
-            with opp.app.test_client() as client:
-                res = client.post("/admin/login", data=json.dumps(login),
-                                  content_type="application/json")
-
-            self.assertEqual(res.status, "400 BAD REQUEST")
-            self.assertTrue(res.is_json)
-
-            self.assertIs(res.json.get("jwt"), None)
-            self.assertEqual(res.json.get("msg"), "Missing credentials")
-
-        validate_result({})
-        validate_result({"username": opp.random_text(8)})
-        validate_result({"password": opp.random_text(8)})
+        self.prove_login_is_invalid({"username": opp.random_text(8)})
+        self.prove_login_is_invalid({"password": opp.random_text(8)})
 
 
-class TestApi(TestWithDatabase):
+class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     Validate CRUD operations for the administrator's API
     """
-    def logged_in_client(self):
-        """
-        Return a logged in client
-        """
-        username = opp.SETTINGS["configuration"]["admin"]["username"]
-        password = opp.SETTINGS["configuration"]["admin"]["password"]
-        data = {"username": username, "password": password}
-
-        client = opp.app.test_client()
-        response = client.post(
-            "/admin/login", mimetype="application/json",
-            data=json.dumps(data))
-
-        return client
-
     def new_episode_post_data(self, episode, audio_file):
         """
         Produce the expected post data for a given episode & audio file
@@ -245,3 +243,65 @@ class TestApi(TestWithDatabase):
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertFalse(os.path.exists(file_path))
+
+    def test_list_episodes(self):
+        """
+        API can list multiple episodes as JSON
+        """
+        episodes = []
+        now = datetime.now()
+
+        for i in range(5):
+            days = timedelta(days=i)
+            ep = EpisodeFactory(published=now - days)
+            opp.db.session.add(ep)
+            opp.db.session.commit()
+            episodes.append(dict(ep))
+
+        with self.logged_in_client() as client:
+            res = client.get("/admin/episodes")
+
+        self.assertTrue(res.is_json)
+
+        jsr = res.json
+        for i in range(5):
+            returned = jsr[i]
+            returned.pop("url")
+            returned["audio_file"].pop("url")
+
+            self.assertEqual(returned, episodes[i])
+
+    def test_read_episode(self):
+        """
+        API delivers single episode as JSON
+        """
+        episode = EpisodeFactory()
+        opp.db.session.add(episode)
+        opp.db.session.commit()
+        data = dict(episode)
+
+        with self.logged_in_client() as client:
+            res = client.get("/admin/episode/%d" % episode.item_id)
+
+        self.assertTrue(res.is_json)
+
+        jsr = res.json
+        jsr.pop("url")
+        jsr["audio_file"].pop("url")
+
+        self.assertEqual(jsr, data)
+
+    def test_no_episode(self):
+        """
+        API produces JSON 404 when called with incorrect item_id
+        """
+        def is_404(res):
+            self.assertTrue(res.is_json)
+            self.assertEqual(res.status, "404 NOT FOUND")
+            self.assertEqual(res.json["msg"], "episode not found")
+
+        with self.logged_in_client() as client:
+            url = "/admin/episode/%d" % random.randint(1, 10)
+            is_404(client.get(url))
+            is_404(client.put(url, data={}))
+            is_404(client.delete(url))

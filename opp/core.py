@@ -11,7 +11,8 @@ import io
 import pytz
 import yaml
 
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request, \
+     send_from_directory, url_for
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
      get_jwt_identity, set_access_cookies, unset_jwt_cookies, config
 from flask_sqlalchemy import SQLAlchemy
@@ -120,6 +121,18 @@ class Episode(db.Model):
     def __repr__(self):
         return "<Episode %s, %s>" % (self.published.isoformat(), self.title)
 
+    def __iter__(self):
+        """Produce iterable of attributes"""
+        return iter([
+            ("item_id", self.item_id),
+            ("title", self.title),
+            ("published", self.published.isoformat()),
+            ("description", self.description),
+            ("image", getattr(self, "image", None)),
+            ("explicit", self.explicit),
+            ("audio_file", dict(self.audio_file)),
+            ("keywords", [kw.word for kw in self.keywords])])
+
 
 class AudioFormat(enum.Enum):
     MP3 = "mp3"
@@ -150,6 +163,15 @@ class AudioFile(db.Model):
 
     def __repr__(self):
         return "<AudioFile %s>" % self.file_name
+
+    def __iter__(self):
+        """Produce iterable of attributes"""
+        return iter([
+            ("item_id", self.item_id),
+            ("file_name", self.file_name),
+            ("audio_format", self.audio_format.value),
+            ("length", self.length),
+            ("duration", self.duration)])
 
 
 class Keyword(db.Model):
@@ -205,31 +227,38 @@ def media(filename):
         filename, as_attachment=False)
 
 
-# - Administrative
+# - Administrative API
+
+class LoginForm(FlaskForm):
+    """
+    Provide a log in form
+    """
+    username = form.StringField(
+        label="Username", validators=[validator.DataRequired()])
+    password = form.PasswordField(
+        label="Password", validators=[validator.DataRequired()])
+
 
 @app.route("/admin/login", methods=["POST"])
 def login():
     """
     Allow site administrator to log in
     """
-    if not request.is_json:
-        return jsonify({"msg": "Invalid JSON"}), 400
+    def valid_login(username, password):
+        return username == SETTINGS["configuration"]["admin"]["username"] and \
+               password == SETTINGS["configuration"]["admin"]["password"]
 
-    params = request.get_json()
-    username = params.get("username")
-    password = params.get("password")
+    form = LoginForm()
 
-    if username is None or password is None:
-        return jsonify({"msg": "Missing credentials"}), 400
+    if form.validate_on_submit() and valid_login(
+            form.username.data, form.password.data):
 
-    if username != SETTINGS["configuration"]["admin"]["username"] \
-            or password != SETTINGS["configuration"]["admin"]["password"]:
-        return jsonify({"success": False, "msg": "Invalid credentials"}), 401
+        token = create_access_token(identity=form.username)
+        resp = jsonify({"jwt": token, "success": True})
+        set_access_cookies(resp, token)
+        return resp, 200
 
-    token = create_access_token(identity=username)
-    resp = jsonify({"jwt": token, "success": True})
-    set_access_cookies(resp, token)
-    return resp, 200
+    return jsonify({"success": False, "msg": "Invalid credentials"}), 401
 
 
 class CreateEpisodeForm(FlaskForm):
@@ -311,4 +340,41 @@ def episode_create():
         return jsonify({"success": True}), 201
 
     app.logger.warning(form.errors)
-    return jsonify({"success": False, "errors": form.errors}), 400
+    return jsonify({"success": False, "msg": form.errors}), 400
+
+
+def episode_json(episode):
+    """
+    Produce the JSON representation of an episode
+    """
+    entry = dict(episode)
+    entry["url"] = url_for("episode_admin", episode_id=episode.item_id)
+    entry["audio_file"]["url"] = url_for(
+        "media", filename=episode.audio_file.file_name, _external=True)
+    return entry
+
+
+@app.route("/admin/episodes", methods=["GET"])
+@jwt_required
+def episode_list():
+    """
+    Produce the episode data in json format
+    """
+    episodes = Episode.query.order_by(Episode.published.desc()).all()
+    data = [episode_json(ep) for ep in episodes]
+    return jsonify(data), 200
+
+
+@app.route("/admin/episode/<int:episode_id>", methods=["GET", "PUT", "DELETE"])
+@jwt_required
+def episode_admin(episode_id):
+    """
+    Allow read, update, and delete operations on a single episode
+    """
+    episode = Episode.query.filter_by(item_id=episode_id).first()
+
+    if episode is None:
+        return jsonify({"success": False, "msg": "episode not found"}), 404
+
+    if request.method == "GET":
+        return episode_json(episode), 200
