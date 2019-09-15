@@ -65,6 +65,15 @@ div.description a:hover, main a:hover {
     background-color: #fff;
 }
 
+main a.bookmark {
+    color: #222;
+    background-color: inherit;
+}
+
+main a.bookmark:hover:after {
+    content: " <"
+}
+
 article {
     background-color: #eee;
     border-radius: .5ex;
