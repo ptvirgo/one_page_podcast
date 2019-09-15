@@ -24,7 +24,7 @@
         <h2>Episodes</h2>
         {% for episode in episodes %}
         <article>
-            <h3>{{ episode.title }}</h3>
+            <h3><a id="episode-{{ episode.item_id }}"></a>{{ episode.title }}</h3>
             {% if episode.image %}
             <img src="{{ url_for('static', filename=episode.image) }}" class="episode"/>
             {% endif %}
