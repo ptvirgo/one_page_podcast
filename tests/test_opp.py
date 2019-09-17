@@ -53,6 +53,23 @@ class WithLoggedInClient:
 
         return client
 
+    def new_episode_post_data(self, episode, audio_file):
+        """
+        Produce the expected post data for a given episode & audio file
+        """
+        data = {
+            "title": episode.title,
+            "published": datetime.fromtimestamp(episode.published.timestamp()),
+            "description": episode.description,
+            "keywords": opp.format_episode_keywords(episode.keywords),
+            "audio_file": audio_file
+        }
+
+        if episode.explicit:
+            data["explicit"] = True
+
+        return data
+
 
 class TestHelpers(unittest.TestCase):
     """
@@ -138,23 +155,6 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     Validate CRUD operations for the administrator's API
     """
-    def new_episode_post_data(self, episode, audio_file):
-        """
-        Produce the expected post data for a given episode & audio file
-        """
-        data = {
-            "title": episode.title,
-            "published": datetime.fromtimestamp(episode.published.timestamp()),
-            "description": episode.description,
-            "keywords": opp.format_episode_keywords(episode.keywords),
-            "audio_file": audio_file
-        }
-
-        if episode.explicit:
-            data["explicit"] = True
-
-        return data
-
     def test_validate_audio_file(self):
         """
         Ensure invalid audio files are rejected
@@ -244,6 +244,8 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertFalse(os.path.exists(file_path))
 
+
+class TestApiRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
     def test_list_episodes(self):
         """
         API can list multiple episodes as JSON
@@ -291,9 +293,10 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         self.assertEqual(jsr, data)
 
-    def test_no_episode(self):
+    def test_not_found(self):
         """
-        API produces JSON 404 when called with incorrect item_id
+        API produces JSON 404 when called with incorrect item_id, for all call
+        types
         """
         def is_404(res):
             self.assertTrue(res.is_json)
@@ -305,3 +308,74 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
             is_404(client.get(url))
             is_404(client.put(url, data={}))
             is_404(client.delete(url))
+
+
+class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
+    """
+    Ensure updating works
+    """
+    def test_update_episode(self):
+        """
+        API allows detail updates.
+        """
+        def make_update(item_id, attr, value):
+            url = "/admin/episode/%d" % item_id
+            data = {attr: value}
+
+            with self.logged_in_client() as client:
+                client.put(url, data=data)
+
+        def test_update(item_id, attr, value):
+            make_update(item_id, attr, value)
+            res = opp.Episode.query.filter_by(item_id=item_id).first()
+
+            msg = "%s failed to attribute" % attr
+            self.assertEqual(getattr(res, attr), value, msg=msg)
+
+        ep = EpisodeFactory()
+        opp.db.session.add(ep)
+        opp.db.session.commit()
+        ep = opp.Episode.query.filter_by(title=ep.title).first()
+        item_id = ep.item_id
+
+        after = EpisodeFactory()
+
+        for attr in ["title", "description", "explicit"]:
+            test_update(item_id, attr, getattr(after, attr))
+
+        test_update(item_id, "published", after.published.isoformat())
+
+        kws = opp.format_episode_keywords(after.keywords)
+        make_update(item_id, "keywords", kws)
+        res = opp.Episode.query.filter_by(item_id=item_id).first()
+        self.assertEqual(opp.format_episode_keywords(res), kws)
+
+
+class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
+    """
+    I can haz delete
+    """
+    def test_delete_episode(self):
+        episode = EpisodeFactory()
+        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
+
+        with open(fn, "rb") as audio_file:
+            data = self.new_episode_post_data(episode, audio_file)
+
+            data = self.new_episode_post_data(episode, audio_file)
+
+            with self.logged_in_client() as client:
+                client.post(
+                    "/admin/episode/new", buffered=True, data=data,
+                    content_type="multipart/form-data")
+
+        res = opp.Episode.query.filter_by(title=episode.title).first()
+        item_id = res.item_id
+
+        self.assertIsNot(res, None)
+
+        with self.logged_in_client() as client:
+            client.delete("/admin/episode/%s" % episode.item_id)
+
+        res = opp.Episode.query.filter_by(item_id=item_id).first()
+        self.assertEqual(res, None)
