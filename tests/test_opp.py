@@ -329,8 +329,10 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
             make_update(item_id, attr, value)
             res = opp.Episode.query.filter_by(item_id=item_id).first()
 
-            msg = "%s failed to attribute" % attr
+            msg = "attribute %s failed to update" % attr
             self.assertEqual(getattr(res, attr), value, msg=msg)
+
+            return res
 
         ep = EpisodeFactory()
         opp.db.session.add(ep)
@@ -338,17 +340,21 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         ep = opp.Episode.query.filter_by(title=ep.title).first()
         item_id = ep.item_id
 
-        after = EpisodeFactory()
+        after = EpisodeFactory(explicit=not ep.explicit)
 
         for attr in ["title", "description", "explicit"]:
             test_update(item_id, attr, getattr(after, attr))
 
-        test_update(item_id, "published", after.published.isoformat())
+        make_update(item_id, "published", after.published.isoformat())
+        res = opp.Episode.query.filter_by(item_id=item_id).first()
+        self.assertEqual(res.published.timestamp(), after.published.timestamp())
 
         kws = opp.format_episode_keywords(after.keywords)
         make_update(item_id, "keywords", kws)
         res = opp.Episode.query.filter_by(item_id=item_id).first()
-        self.assertEqual(opp.format_episode_keywords(res), kws)
+        self.assertEqual(opp.format_episode_keywords(res.keywords), kws)
+
+        raise NotImplementedError("Test that updates ONLY change requested fields")
 
 
 class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
@@ -361,7 +367,6 @@ class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         with open(fn, "rb") as audio_file:
             data = self.new_episode_post_data(episode, audio_file)
-
             data = self.new_episode_post_data(episode, audio_file)
 
             with self.logged_in_client() as client:
@@ -371,11 +376,14 @@ class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         res = opp.Episode.query.filter_by(title=episode.title).first()
         item_id = res.item_id
+        path = res.audio_file.abs_path
 
-        self.assertIsNot(res, None)
+        self.assertIsNot(item_id, None)
+        self.assertTrue(os.path.exists(path))
 
         with self.logged_in_client() as client:
-            client.delete("/admin/episode/%s" % episode.item_id)
+            client.delete("/admin/episode/%d" % item_id)
 
         res = opp.Episode.query.filter_by(item_id=item_id).first()
         self.assertEqual(res, None)
+        self.assertFalse(os.path.exists(path))

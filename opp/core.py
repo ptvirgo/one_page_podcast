@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from cleantext import clean
 from copy import deepcopy
 from datetime import datetime
 import enum
@@ -73,7 +72,7 @@ def format_episode_keywords(kws):
     """
     Convert a list of Keyword objects to a comma separated string of the words
     """
-    return ",".join([kw.word for kw in kws])
+    return ",".join(sorted([kw.word for kw in kws]))
 
 
 def format_duration(time):
@@ -118,6 +117,19 @@ class Episode(db.Model):
     keywords = db.relationship("Keyword", backref="episodes",
                                secondary=episode_keywords)
 
+    def set_keywords(self, words):
+        """Replace self.keywords with newly provided words"""
+        for kw in self.keywords:
+            self.keywords.remove(kw)
+
+        for word in words:
+            kw = Keyword.query.filter_by(word=word).first()
+
+            if kw is None:
+                kw = Keyword(word=word)
+
+            self.keywords.append(kw)
+
     def __repr__(self):
         return "<Episode %s, %s>" % (self.published.isoformat(), self.title)
 
@@ -160,6 +172,15 @@ class AudioFile(db.Model):
         db.Integer, db.ForeignKey("episode.item_id", ondelete="CASCADE"))
     episode = db.relationship("Episode", backref=db.backref(
         "audio_file", uselist=False, cascade="all, delete-orphan"))
+
+    @staticmethod
+    def path_for(file_name):
+        return os.path.join(
+            SETTINGS["configuration"]["directories"]["media"], file_name)
+
+    @property
+    def abs_path(self):
+        return self.path_for(self.file_name)
 
     def __repr__(self):
         return "<AudioFile %s>" % self.file_name
@@ -223,8 +244,7 @@ def rss():
 @app.route("/media/<path:filename>")
 def media(filename):
     return send_from_directory(
-        SETTINGS["configuration"]["directories"]["media"],
-        filename, as_attachment=False)
+        AudioFile.path_for(filename), as_attachment=False)
 
 
 # - Administrative API
@@ -271,7 +291,8 @@ class CreateEpisodeForm(FlaskForm):
         label="Publication date & time", validators=[validator.DataRequired()])
     description = form.StringField(
         label="Description", validators=[validator.DataRequired()])
-    explicit = form.BooleanField(label="Explicit")
+    explicit = form.BooleanField(
+        label="Explicit", false_values=("false", "False", ""))
     keywords = form.StringField(
         label="Keywords", validators=[validator.Optional()])
     audio_file = FileField(
@@ -303,8 +324,7 @@ def episode_create():
         af_name = audio_file_name(
             form.published.data, form.title.data, af_format)
 
-        af_path = os.path.join(
-            SETTINGS["configuration"]["directories"]["media"], af_name)
+        af_path = AudioFile.path_for(af_name)
 
         with open(af_path, "wb") as f:
             f.write(af_data)
@@ -325,14 +345,8 @@ def episode_create():
         episode.audio_file = audio_file
 
         if form.keywords.data is not None:
-            for word in form.keywords.data.split(","):
-                word = clean(word)
-                kw = Keyword.query.filter_by(word=word).first()
-
-                if kw is None:
-                    kw = Keyword(word=word)
-
-                episode.keywords.append(kw)
+            words = form.keywords.data.split(",")
+            episode.set_keywords(words)
 
         db.session.add(episode)
         db.session.commit()
@@ -365,6 +379,22 @@ def episode_list():
     return jsonify(data), 200
 
 
+class UpdateEpisodeForm(FlaskForm):
+    """
+    Provide a form for updating episodes
+    """
+    title = form.StringField(
+        label="Title", validators=[validator.Optional()])
+    published = DateTimeField(
+        label="Publication date & time", validators=[validator.Optional()])
+    description = form.StringField(
+        label="Description", validators=[validator.Optional()])
+    explicit = form.BooleanField(
+        label="Explicit", false_values=("false", "False", ""))
+    keywords = form.StringField(
+        label="Keywords", validators=[validator.Optional()])
+
+
 @app.route("/admin/episode/<int:episode_id>", methods=["GET", "PUT", "DELETE"])
 @jwt_required
 def episode_admin(episode_id):
@@ -378,3 +408,30 @@ def episode_admin(episode_id):
 
     if request.method == "GET":
         return episode_json(episode), 200
+
+    if request.method == "PUT":
+        form = UpdateEpisodeForm()
+
+        if form.validate_on_submit():
+            for attr in ["title", "description", "explicit"]:
+                field = getattr(form, attr)
+
+                if field.data is not None and field.data != "":
+                    setattr(episode, attr, field.data)
+
+            if form.published.data is not None:
+                episode.published = datetime.fromtimestamp(
+                    form.published.data.timestamp())
+
+            if form.keywords.data is not None:
+                words = form.keywords.data.split(",")
+                episode.set_keywords(words)
+
+            db.session.commit()
+            return episode_json(episode), 200
+
+    if request.method == "DELETE":
+        os.remove(episode.audio_file.abs_path)
+        db.session.delete(episode)
+        db.session.commit()
+        return jsonify({"success": True}), 200
