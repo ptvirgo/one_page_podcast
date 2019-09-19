@@ -334,16 +334,35 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
             return res
 
+        def test_for_unexpected_changes(episode, expect):
+            got = dict(episode)
+            for key, value in expect.items():
+                msg = "unexpected change in %s" % key
+                self.assertEqual(got[key], value, msg=msg)
+
         ep = EpisodeFactory()
         opp.db.session.add(ep)
         opp.db.session.commit()
         ep = opp.Episode.query.filter_by(title=ep.title).first()
         item_id = ep.item_id
 
+        expect = dict(ep)
+        expect.pop("audio_file")
+        expect.pop("item_id")
+
+        # WTForms converts BooleanFields to false when they are absent from a
+        # form input.  In production, the value for "explicit" must always be
+        # submitted explicitly.
+        expect.pop("explicit")
+
         after = EpisodeFactory(explicit=not ep.explicit)
 
         for attr in ["title", "description", "explicit"]:
-            test_update(item_id, attr, getattr(after, attr))
+            val = getattr(after, attr)
+            expect[attr] = val
+
+            ep = test_update(item_id, attr, val)
+            test_for_unexpected_changes(ep, expect)
 
         make_update(item_id, "published", after.published.isoformat())
         res = opp.Episode.query.filter_by(item_id=item_id).first()
@@ -353,8 +372,6 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         make_update(item_id, "keywords", kws)
         res = opp.Episode.query.filter_by(item_id=item_id).first()
         self.assertEqual(opp.format_episode_keywords(res.keywords), kws)
-
-        raise NotImplementedError("Test that updates ONLY change requested fields")
 
 
 class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):

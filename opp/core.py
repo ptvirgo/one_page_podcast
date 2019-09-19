@@ -119,7 +119,7 @@ class Episode(db.Model):
 
     def set_keywords(self, words):
         """Replace self.keywords with newly provided words"""
-        for kw in self.keywords:
+        for kw in list(self.keywords):
             self.keywords.remove(kw)
 
         for word in words:
@@ -413,6 +413,7 @@ def episode_admin(episode_id):
         form = UpdateEpisodeForm()
 
         if form.validate_on_submit():
+
             for attr in ["title", "description", "explicit"]:
                 field = getattr(form, attr)
 
@@ -423,7 +424,7 @@ def episode_admin(episode_id):
                 episode.published = datetime.fromtimestamp(
                     form.published.data.timestamp())
 
-            if form.keywords.data is not None:
+            if form.keywords.data is not None and form.keywords.data != "":
                 words = form.keywords.data.split(",")
                 episode.set_keywords(words)
 
