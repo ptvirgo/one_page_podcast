@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import io
 import json
 import os
+import pytz
 import unittest
 import random
 
@@ -14,6 +15,7 @@ from .factories import EpisodeFactory
 
 TEST_PATH = os.path.dirname(os.path.abspath(__file__))
 
+opp.app.app_context().push()
 if opp.db.engine.has_table("episode"):
     raise RuntimeError("Previous database exists.  If you're sure you're "
                        "using a test database, delete it.")
@@ -34,6 +36,21 @@ class WithDatabase:
     def tearDown(self, *args, **kwargs):
         opp.db.drop_all()
 
+    def create_test_episode(self, episode, Client):
+        """Create the test episode"""
+        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
+
+        with open(fn, "rb") as audio_file:
+            data = self.new_episode_post_data(episode, audio_file)
+
+            with Client() as client:
+                response = client.post(
+                    "/admin/episode/new", buffered=True, data=data,
+                    content_type="multipart/form-data")
+
+        return response
+
+
 
 class WithLoggedInClient:
     """
@@ -48,8 +65,7 @@ class WithLoggedInClient:
         data = {"username": username, "password": password}
 
         client = opp.app.test_client()
-        client.post("/admin/login", mimetype="application/json",
-                    data=json.dumps(data))
+        client.post("/admin/login", data=data)
 
         return client
 
@@ -59,7 +75,7 @@ class WithLoggedInClient:
         """
         data = {
             "title": episode.title,
-            "published": datetime.fromtimestamp(episode.published.timestamp()),
+            "published": episode.published,
             "description": episode.description,
             "keywords": opp.format_episode_keywords(episode.keywords),
             "audio_file": audio_file
@@ -80,8 +96,9 @@ class TestHelpers(unittest.TestCase):
         title = "It could / couldn't be the title, etc."
         af_format = opp.AudioFormat.MP3
 
-        self.assertEqual(opp.audio_file_name(published, title, af_format),
-                         "2019-09-02-it_could_couldnt_be_the_title_etc.mp3")
+        self.assertEqual(opp.AudioFile.standardized_name(
+            published, title, af_format),
+            "2019-09-02-it_could_couldnt_be_the_title_etc.mp3")
 
 
 class TestFormatters(unittest.TestCase):
@@ -114,11 +131,9 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         with opp.app.test_client() as client:
             res = client.post("/admin/login", data=login)
 
-        self.assertEqual(res.status, "200 OK")
-        self.assertTrue(res.is_json)
-
-        self.assertIsNot(res.json.get("jwt"), None)
-        self.assertIs(res.json.get("msg"), None)
+        self.assertIn("access_token_cookie=", res.headers["Set-Cookie"])
+        self.assertNotIn("access_token_cookie=;", res.headers["Set-Cookie"])
+        self.assertEqual(res.status, "303 SEE OTHER")
 
     def prove_login_is_invalid(self, login):
         """
@@ -127,11 +142,8 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         with opp.app.test_client() as client:
             res = client.post("/admin/login", data=login)
 
+        self.assertIn("access_token_cookie=;", res.headers.get("Set-Cookie"))
         self.assertEqual(res.status, "401 UNAUTHORIZED")
-        self.assertTrue(res.is_json)
-
-        self.assertIs(res.json.get("jwt"), None)
-        self.assertEqual(res.json.get("msg"), "Invalid credentials")
 
     def test_invalid_login_produces_401(self):
         """
@@ -143,15 +155,18 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         }
         self.prove_login_is_invalid(login)
 
-    def test_login_without_credentials_produces_400(self):
+    def test_login_without_credentials_produces_401(self):
         """
-        Make sure a login without credentials will get a 400 response
+        Make sure a login without credentials will get a 401 response
         """
-        self.prove_login_is_invalid({"username": opp.random_text(8)})
-        self.prove_login_is_invalid({"password": opp.random_text(8)})
+        self.prove_login_is_invalid({"username":
+            opp.SETTINGS["configuration"]["admin"]["username"]})
+        self.prove_login_is_invalid({"password": 
+            opp.SETTINGS["configuration"]["admin"]["username"]})
+        self.prove_login_is_invalid({})
 
 
-class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
+class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     Validate CRUD operations for the administrator's API
     """
@@ -170,7 +185,7 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         self.assertEqual(response.status, "400 BAD REQUEST")
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"],
-            opp.audio_file_name(data["published"], data["title"],
+            opp.AudioFile.standardized_name(data["published"], data["title"],
                                 opp.AudioFormat.MP3))
         self.assertFalse(os.path.exists(file_path))
         self.assertIs(opp.Episode.query.filter_by(
@@ -185,29 +200,23 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         self.assertIs(stored, None,
                       msg="Factory should not have created database entry")
 
-        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
-
-        with open(fn, "rb") as audio_file:
-            data = self.new_episode_post_data(episode, audio_file)
-
-            with self.logged_in_client() as client:
-                response = client.post(
-                    "/admin/episode/new", buffered=True, data=data,
-                    content_type="multipart/form-data")
-
+        response = self.create_test_episode(episode, self.logged_in_client)
         # Good response?
-        self.assertEqual(response.status, "201 CREATED")
+        self.assertEqual(response.status, "303 SEE OTHER")
 
         # Data stored correctly?
         stored = opp.Episode.query.filter_by(title=episode.title).first()
-        self.assertEqual(stored.title, data["title"])
-        self.assertEqual(stored.published, data["published"])
-        self.assertEqual(stored.description, data["description"])
+        self.assertEqual(stored.title, episode.title)
+
+        published = pytz.utc.localize(stored.published)
+        self.assertEqual(published, episode.published)
+
+        self.assertEqual(stored.description, episode.description)
         self.assertEqual(stored.explicit, episode.explicit)
 
         # File created?
-        fn = opp.audio_file_name(data["published"], data["title"],
-                                 opp.AudioFormat.OggOpus)
+        fn = opp.AudioFile.standardized_name(
+            episode.published, episode.title, opp.AudioFormat.OggOpus)
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertTrue(os.path.exists(file_path))
@@ -224,32 +233,22 @@ class TestApiCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         # Posting to the create api wouthout authentication is blocked
         episode = EpisodeFactory()
-        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
-
-        with open(fn, "rb") as audio_file:
-            data = self.new_episode_post_data(episode, audio_file)
-
-            with opp.app.test_client() as client:
-                response = client.post(
-                    "/admin/episode/new", buffered=True, data=data,
-                    content_type="multipart/form-data")
+        response = self.create_test_episode(episode, opp.app.test_client)
 
         self.assertEqual(response.status, "401 UNAUTHORIZED")
         self.assertIs(
             opp.Episode.query.filter_by(title=episode.title).first(), None)
 
-        fn = opp.audio_file_name(data["published"], data["title"],
-                                 opp.AudioFormat.OggOpus)
+        fn = opp.AudioFile.standardized_name(
+            episode.published, episode.title, opp.AudioFormat.OggOpus)
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertFalse(os.path.exists(file_path))
 
+class TestRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
-class TestApiRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
     def test_list_episodes(self):
-        """
-        API can list multiple episodes as JSON
-        """
+        """List episodes page appears"""
         episodes = []
         now = datetime.now()
 
@@ -258,59 +257,39 @@ class TestApiRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
             ep = EpisodeFactory(published=now - days)
             opp.db.session.add(ep)
             opp.db.session.commit()
-            episodes.append(dict(ep))
+            episodes.append(ep)
 
         with self.logged_in_client() as client:
             res = client.get("/admin/episodes")
 
-        self.assertTrue(res.is_json)
-
-        jsr = res.json
+        self.assertEqual(res.status, "200 OK")
         for i in range(5):
-            returned = jsr[i]
-            returned.pop("url")
-            returned["audio_file"].pop("url")
-
-            self.assertEqual(returned, episodes[i])
+            self.assertIn(episodes[i].title, res.data.decode())
 
     def test_read_episode(self):
-        """
-        API delivers single episode as JSON
-        """
+        """Admin page on a single episode appears"""
         episode = EpisodeFactory()
         opp.db.session.add(episode)
         opp.db.session.commit()
-        data = dict(episode)
 
         with self.logged_in_client() as client:
             res = client.get("/admin/episode/%d" % episode.item_id)
 
-        self.assertTrue(res.is_json)
-
-        jsr = res.json
-        jsr.pop("url")
-        jsr["audio_file"].pop("url")
-
-        self.assertEqual(jsr, data)
+        self.assertEqual(res.status, "200 OK")
+        self.assertIn(episode.title, res.data.decode())
 
     def test_not_found(self):
-        """
-        API produces JSON 404 when called with incorrect item_id, for all call
-        types
-        """
+        """Admin returns 404 for non-existant episodes"""
         def is_404(res):
-            self.assertTrue(res.is_json)
             self.assertEqual(res.status, "404 NOT FOUND")
-            self.assertEqual(res.json["msg"], "episode not found")
 
         with self.logged_in_client() as client:
             url = "/admin/episode/%d" % random.randint(1, 10)
             is_404(client.get(url))
-            is_404(client.put(url, data={}))
-            is_404(client.delete(url))
+            is_404(client.post(url, data={}))
 
 
-class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
+class TestUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     Ensure updating works
     """
@@ -323,7 +302,7 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
             data = {attr: value}
 
             with self.logged_in_client() as client:
-                client.put(url, data=data)
+                client.post(url, data=data)
 
         def test_update(item_id, attr, value):
             make_update(item_id, attr, value)
@@ -366,7 +345,10 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         make_update(item_id, "published", after.published.isoformat())
         res = opp.Episode.query.filter_by(item_id=item_id).first()
-        self.assertEqual(res.published.timestamp(), after.published.timestamp())
+
+        # The right day is required.
+        published = pytz.utc.localize(res.published)
+        self.assertEqual(published, after.published)
 
         kws = opp.format_episode_keywords(after.keywords)
         make_update(item_id, "keywords", kws)
@@ -374,33 +356,44 @@ class TestApiUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         self.assertEqual(opp.format_episode_keywords(res.keywords), kws)
 
 
-class TestApiDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
+class TestDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
     """
     I can haz delete
     """
-    def test_delete_episode(self):
-        episode = EpisodeFactory()
-        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
+    def delete_with(self, episode, data, Client):
+        """Create an episode correctly, then try to delete with given Client"""
+        self.create_test_episode(episode, self.logged_in_client)
 
-        with open(fn, "rb") as audio_file:
-            data = self.new_episode_post_data(episode, audio_file)
-            data = self.new_episode_post_data(episode, audio_file)
-
-            with self.logged_in_client() as client:
-                client.post(
-                    "/admin/episode/new", buffered=True, data=data,
-                    content_type="multipart/form-data")
-
-        res = opp.Episode.query.filter_by(title=episode.title).first()
-        item_id = res.item_id
-        path = res.audio_file.abs_path
-
+        ep = opp.Episode.query.filter_by(title=episode.title).first()
+        item_id = ep.item_id
         self.assertIsNot(item_id, None)
+
+        path = os.path.join(
+            opp.SETTINGS["configuration"]["directories"]["media"],
+            ep.audio_file.file_name)
+
         self.assertTrue(os.path.exists(path))
 
-        with self.logged_in_client() as client:
-            client.delete("/admin/episode/%d" % item_id)
+        with Client() as client:
+            response = client.post("/admin/episode/%d/delete" % item_id,
+                                   data=data)
 
-        res = opp.Episode.query.filter_by(item_id=item_id).first()
-        self.assertEqual(res, None)
+        return response, path
+
+    def test_delete_episode(self):
+        """Make sure deleting works"""
+        episode = EpisodeFactory()
+        _, path = self.delete_with(episode, {"confirm": True}, self.logged_in_client)
+
+        ep = opp.Episode.query.filter_by(title=episode.title).first()
+        self.assertEqual(ep, None)
         self.assertFalse(os.path.exists(path))
+
+    def test_delete_requires_confirmation(self):
+        """Make sure deleting without confirmation doesn't"""
+        episode = EpisodeFactory()
+        _, path = self.delete_with(episode, {}, self.logged_in_client)
+        ep = opp.Episode.query.filter_by(title=episode.title).first()
+        self.assertIsNot(ep, None)
+        self.assertTrue(os.path.exists(path))
+        os.remove(path)

@@ -1,7 +1,5 @@
-from cleantext import clean
 import random
 import string
-from werkzeug.utils import secure_filename
 
 # Helper functions must:
 # - stand alone: do not import other parts of the opp library
@@ -21,13 +19,3 @@ def random_text(n):
     """
     return ''.join(random.choice(string.ascii_letters + string.digits)
                    for _ in range(n))
-
-
-def audio_file_name(published, title, audio_format):
-    """
-    Produce a standardized file name for audio files
-    """
-    day = published.strftime("%Y-%m-%d")
-    extension = audio_format.value
-    name = clean(title, no_punct=True).replace(' ', '_')
-    return secure_filename("%s-%s.%s" % (day, name, extension))

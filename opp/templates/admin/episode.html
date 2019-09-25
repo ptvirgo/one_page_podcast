@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ episode.title }}{% endblock %}
+
+{% block content %}
+<form id="update-episode" action="{{ url_for('episode_admin', episode_id=episode.item_id) }}" method="POST">
+    {{ form.csrf_token }}
+    <p>{{ form.title.label }}: {{ form.title(value=episode.title) }}</p>
+    <p>{{ form.published.label }}: <input id="published" name="published" type="datetime" value="{{ episode.published|datetime }}" /></p>
+    <p>{{ form.description.label }}: {{ form.description(value=episode.description) }}</p>
+    <p>{{ form.keywords.label }}: {{ form.keywords(value=episode.keywords|episode_keywords) }}</p>
+    <p>{{ form.explicit.label }}: {{ form.explicit(value=episode.explicit) }}</p>
+
+    <p><input type="submit" value="Update"/></p>
+</form>
+{% endblock %}

@@ -3,7 +3,7 @@
 import factory
 import factory.fuzzy
 
-from opp import Episode, Keyword, AudioFormat, AudioFile
+from opp.models import Episode, Keyword, AudioFormat, AudioFile
 import pytz
 
 
