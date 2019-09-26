@@ -10,5 +10,6 @@ setup(
     packages=find_packages(),
     scripts=["opp_manage.py"],
     include_package_data=True,
-    package_data={"opp": ["*.yml", "templates/*", "static/*"]}
+    package_data={"opp": ["*.yml", "templates/*", "static/*",
+                          "templates/admin/*", "static/admin/*"]}
     )
