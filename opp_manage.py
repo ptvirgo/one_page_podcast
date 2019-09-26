@@ -8,9 +8,10 @@ import mutagen
 import os
 import shutil
 
-from opp import db, DEFAULT_CFG, SETTINGS, AudioFormat, AudioFile, Episode, Keyword, \
+from opp import app, db, DEFAULT_CFG, SETTINGS, AudioFormat, AudioFile, Episode, Keyword, \
     format_datetime, format_episode_keywords
 
+app.app_context().push()
 
 def manage_database(args):
     """

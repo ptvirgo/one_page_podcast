@@ -3,8 +3,7 @@
 import factory
 import factory.fuzzy
 
-from opp import Episode, Keyword, AudioFormat, AudioFile
-import pytz
+from opp.models import Episode, Keyword, AudioFormat, AudioFile
 
 
 class EpisodeFactory(factory.Factory):
@@ -12,7 +11,7 @@ class EpisodeFactory(factory.Factory):
         model = Episode
 
     title = factory.Faker("sentence", nb_words=3)
-    published = factory.Faker("date_time", tzinfo=pytz.utc)
+    published = factory.Faker("date_time")
     description = factory.Faker("sentence", nb_words=8)
     image = factory.Faker("file_name", extension="jpg")
     explicit = factory.fuzzy.FuzzyChoice([True, False])

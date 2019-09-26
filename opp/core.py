@@ -2,18 +2,20 @@
 
 from copy import deepcopy
 from datetime import datetime
-import enum
 import markdown
 import os
 import pytz
 import yaml
 
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory
-from flask_jwt_simple import JWTManager, jwt_required, create_jwt, \
-     get_jwt_identity
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, Response, make_response, redirect, \
+    render_template, request, send_from_directory, url_for
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
+     set_access_cookies, unset_jwt_cookies
 
 from .helpers import random_text
+from .models import db, Episode, AudioFormat, AudioFile, Keyword
+from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, \
+    UpdateEpisodeForm
 
 # Configuration
 
@@ -31,11 +33,22 @@ app = Flask(__name__,
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
-app.config['JWT_SECRET_KEY'] = random_text(32)
+app.config["SECRET_KEY"] = random_text(32)
+
+app.config["JWT_SECRET_KEY"] = random_text(32)
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_COOKIE_SECURE"] = False
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+app.config["JWT_ACCESS_COOKIE_PATH"] = "/admin"
+
+app.config["WTF_CSRF_ENABLED"] = False
+
 JWT = JWTManager(app)
 
+db.init_app(app)
 
 # Template formatters
+
 
 def format_datetime(dt, fmt="ymd"):
     """
@@ -53,7 +66,7 @@ def format_episode_keywords(kws):
     """
     Convert a list of Keyword objects to a comma separated string of the words
     """
-    return ",".join([kw.word for kw in kws])
+    return ",".join(sorted([kw.word for kw in kws]))
 
 
 def format_duration(time):
@@ -76,65 +89,6 @@ app.jinja_env.filters["episode_keywords"] = format_episode_keywords
 app.jinja_env.filters["duration"] = format_duration
 app.jinja_env.filters["markdown"] = markdown.markdown
 
-# Database tables
-
-db = SQLAlchemy(app)
-episode_keywords = db.Table(
-    "episode_keywords",
-    db.Column("episode_id", db.Integer, db.ForeignKey("episode.item_id"),
-              primary_key=True),
-    db.Column("keyword_id", db.Integer, db.ForeignKey("keyword.item_id"),
-              primary_key=True))
-
-
-class Episode(db.Model):
-    item_id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(256), nullable=False)
-    published = db.Column(db.DateTime, nullable=False, index=True)
-    description = db.Column(db.String(4096), nullable=False)
-    image = db.Column(db.String(256))
-    explicit = db.Column(db.Boolean, default=False, nullable=False)
-
-    keywords = db.relationship("Keyword", backref="episodes",
-                               secondary=episode_keywords)
-
-    def __repr__(self):
-        return "<Episode %s, %s>" % (self.published.isoformat(), self.title)
-
-
-class AudioFormat(enum.Enum):
-    MP3 = "audio/mpeg"
-    OggVorbis = "audio/ogg"
-    OggOpus = "audio/ogg"  # not a typo
-
-
-class AudioFile(db.Model):
-    item_id = db.Column(db.Integer, primary_key=True)
-    file_name = db.Column(db.String(256), unique=True, index=True)
-    audio_format = db.Column(db.Enum(AudioFormat))
-    length = db.Column(db.Integer)
-    duration = db.Column(db.Integer)
-    episode_id = db.Column(
-        db.Integer, db.ForeignKey("episode.item_id", ondelete="CASCADE"))
-    episode = db.relationship("Episode", backref=db.backref(
-        "audio_file", uselist=False, cascade="all, delete-orphan"))
-
-    def __repr__(self):
-        return "<AudioFile %s>" % self.file_name
-
-
-class Keyword(db.Model):
-    item_id = db.Column(db.Integer, primary_key=True)
-    word = db.Column(db.String(32))
-
-    def __str__(self):
-        return self.word
-
-    def __repr__(self):
-        return "<Keyword %s>" % self.word
-
-
-# Web routes
 
 # - Front end for users
 
@@ -176,25 +130,149 @@ def media(filename):
         filename, as_attachment=False)
 
 
-# - Administrative
+# - Administrative API
 
-@app.route('/login', methods=['POST'])
+@app.route("/admin/login", methods=["GET", "POST"])
 def login():
     """
     Allow site administrator to log in
     """
-    if not request.is_json:
-        return jsonify({"msg": "Invalid JSON"}), 400
+    def login_page(form, error=None):
+        if error is None:
+            status = 200
+        else:
+            status = 401
 
-    params = request.get_json()
-    username = params.get('username')
-    password = params.get('password')
+        podcast = deepcopy(SETTINGS["podcast"])
+        resp = make_response(render_template(
+            "admin/login.html", form=form, podcast=podcast, error=error))
+        unset_jwt_cookies(resp)
+        return resp, status
 
-    if username is None or password is None:
-        return jsonify({"msg": "Missing credentials"}), 400
+    username = SETTINGS["configuration"]["admin"]["username"]
+    password = SETTINGS["configuration"]["admin"]["password"]
+    form = LoginForm(username, password)
 
-    if username != SETTINGS["configuration"]["admin"]["username"] \
-            or password != SETTINGS["configuration"]["admin"]["password"]:
-        return jsonify({"msg": "Invalid credentials"}), 401
+    if request.method == "GET":
+        return login_page(form)
 
-    return jsonify({'jwt': create_jwt(identity=username)}), 200
+    if form.validate_on_submit():
+        resp = redirect(url_for("episode_list"))
+        token = create_access_token(identity=form.username)
+        set_access_cookies(resp, token)
+        return resp, 303
+
+    return login_page(form, error="Invalid credentials")
+
+
+@app.route("/admin/episode/new", methods=["GET", "POST"])
+@jwt_required
+def episode_create():
+    """
+    Allow administrator to create new episodes
+    """
+    def page(form, error=None):
+        podcast = deepcopy(SETTINGS["podcast"])
+        return render_template(
+            "admin/create.html", form=form, podcast=podcast, error=error)
+
+    form = CreateEpisodeForm(
+        SETTINGS["configuration"]["directories"]["media"],
+        pytz.timezone(SETTINGS["configuration"]["timezone"]))
+
+    if request.method == "GET":
+        return page(form), 200
+
+    if form.validate_on_submit():
+        episode = form.create_episode()
+
+        try:
+            db.session.add(episode)
+            db.session.commit()
+        except Exception as error:
+            app.logger.error("Failed to save episode: %s" % str(error))
+            file_path = os.path.join(form.media_dir,
+                                     episode.audio_file.file_name)
+            os.remove(file_path)
+            return page(form, error="Failed to save episode, see log"), 500
+
+        return redirect(url_for("episode_list")), 303
+
+    return page(form), 400
+
+
+@app.route("/admin/episodes", methods=["GET"])
+@jwt_required
+def episode_list():
+    """
+    List available episodes for the admin
+    """
+    podcast = deepcopy(SETTINGS["podcast"])
+    episodes = Episode.query.order_by(Episode.published.desc()).all()
+
+    return render_template(
+        "admin/list.html", podcast=podcast, episodes=episodes), 200
+
+
+@app.route("/admin/episode/<int:episode_id>", methods=["GET", "POST"])
+@jwt_required
+def episode_update(episode_id):
+    """
+    Allow admin to update episodes
+    """
+    def page(episode, form):
+        podcast = deepcopy(SETTINGS["podcast"])
+        return render_template(
+            "admin/update.html", episode=episode, form=form, podcast=podcast)
+
+    time_zone = pytz.timezone(SETTINGS["configuration"]["timezone"])
+    form = UpdateEpisodeForm(time_zone)
+    episode = Episode.query.filter_by(item_id=episode_id).first()
+
+    if episode is None:
+        return "Not found", 404
+
+    if request.method == "GET":
+        return page(episode, form), 200
+
+    if form.validate_on_submit():
+        episode = form.update_episode(episode)
+        db.session.commit()
+
+        return page(episode, form), 200
+
+    return page(episode, form), 400
+
+
+@app.route("/admin/episode/<int:episode_id>/delete", methods=["GET", "POST"])
+@jwt_required
+def episode_delete(episode_id):
+    """
+    Allow admin to delete episodes
+    """
+    def page(episode, form):
+        podcast = deepcopy(SETTINGS["podcast"])
+        return render_template(
+            "admin/delete.html", episode=episode, form=form, podcast=podcast)
+
+    form = DeleteEpisodeForm()
+    episode = Episode.query.filter_by(item_id=episode_id).first()
+
+    if episode is None:
+        return "Not found", 404
+
+    if request.method == "GET":
+        return page(episode, form), 200
+
+    if form.validate_on_submit():
+        file_path = os.path.join(
+            SETTINGS["configuration"]["directories"]["media"],
+            episode.audio_file.file_name)
+
+        db.session.delete(episode)
+        db.session.commit()
+        os.remove(file_path)
+
+        return redirect(url_for("episode_list")), 303
+
+    return page(episode, form), 400

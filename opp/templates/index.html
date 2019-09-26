@@ -36,7 +36,7 @@
             <div class="description">{{ episode.description|markdown|safe }}</div>
             {% if episode.explicit %}<p class="explicit">Contains explicit content.</p>{% endif %}
             <audio controls>
-                <source src="{{ url_for('media', filename=episode.audio_file.file_name) }}" type="{{ episode.audio_file.audio_format.value }}"/>
+                <source src="{{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}" type="{{ episode.audio_file.audio_format.mimetype }}"/>
             </audio>
 
         </article>

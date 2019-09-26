@@ -9,19 +9,11 @@ body {
 }
 
 header {
-    align-items: center;
     background-color: #222;
     border-radius: 1ex;
     color: #eee;
-    display: flex;
-    justify-content: space-between;
     padding: .25em 1ex;
-}
-
-header img {
-    height: 32pt;
-    width: 32pt;
-    margin 0 1ex;
+    text-align: center;
 }
 
 header h1 {
@@ -42,63 +34,59 @@ h3, p {
 }
 
 a {
+    border-radius: .5ex;
     color: #f60;
+    display: inline-block;
     font-weight: bold;
     text-decoration: none;
+    padding: 1pt;
 }
 
 a:visited {
     color: #f90;
 }
 
-div.description a, main a {
-    display: inline-block;
-    border-radius: .5ex;
-    padding: 1pt;
-}
-
-div.description a:hover, main a:hover {
+a:hover {
     color: #f60;
     background-color: #fff;
 }
 
-main a.bookmark {
-    color: #222;
-    background-color: inherit;
+input[type="submit"] {
+    border-radius: .5ex;
+    background-color: #f60;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14pt;
+    padding: 2px 1ex;
+    text-decoration: none;
 }
 
-main a.bookmark:hover:after {
-    content: " <"
-}
-
-article {
+form, table {
     background-color: #eee;
     border-radius: .5ex;
     margin: 0 0 2em 0;
     padding: .5em 1ex;
 }
 
-article img.episode {
-    float: left;
+table {
+    width: 100%
 }
 
-article aside {
-    border-left: 1px solid #222;
-    float: right;
-    max-width: 35ex;
-    margin: 0 0 1em 1ex;
-    padding-left: 2ex;
+
+tr:hover {
+    background-color: #ddd;
 }
 
-article aside p {
-    margin: 0;
+td, th {
+    text-align: left;
 }
 
-audio {
-    border-radius: .5ex;
-    width: 100%;
+td {
+    border-top: 1px solid #ddd;
 }
 
-main {
-    clear: both;
+label {
+    display: inline-block;
+    min-width: 15ex;
 }
