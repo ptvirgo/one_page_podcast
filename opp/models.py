@@ -91,7 +91,7 @@ class AudioFile(db.Model):
         extension = file_format.value
         name = clean(title, no_punct=True).replace(' ', '_')
         return secure_filename("%s-%s.%s" % (day, name, extension))
-    
+
     def __repr__(self):
         return "<AudioFile %s>" % self.file_name
 

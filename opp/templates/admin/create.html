@@ -1,13 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>{{ podcast.title }}: Create New Episode</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script>
-  </head>
-  <body>
-    <p>You son of bitch.</p>
-  </body>
-</html>
-
+{% extends "admin/base.html" %}
+{% block title %}New Episode{% endblock %}
+{% block content %}
+<h2>New Episode</h2>
+<form action="{{ url_for('episode_create') }}" method="POST" enctype="multipart/form-data">
+    {{ form.csrf_token }}
+    <p>{{ form.title.label }}: {{ form.title }}</p>
+    <p>{{ form.published.label }}: <input type="date" id="published" name="published" /></p>
+    <p>{{ form.description.label }}: {{ form.description }}</p>
+    <p>{{ form.keywords.label }}: {{ form.keywords }}</p>
+    <p>{{ form.explicit.label }}: {{ form.explicit }}</p>
+    <p>{{ form.audio_file.label }}: {{ form.audio_file}}</p>
+    <input type="submit" value="Create Episode"/>
+    {%- if form.errors %}
+    <ul>
+        {%- for error in form.errors %}
+        <li class="error">{{ error }}</li>
+        {%- endfor %}
+    </ul>
+    {%- endif %}
+</form>
+{% endblock %}

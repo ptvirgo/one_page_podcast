@@ -7,14 +7,15 @@ import os
 import pytz
 import yaml
 
-from flask import Flask, Response, jsonify, make_response, redirect, \
+from flask import Flask, Response, make_response, redirect, \
     render_template, request, send_from_directory, url_for
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
-     get_jwt_identity, set_access_cookies, unset_jwt_cookies, config
+     set_access_cookies, unset_jwt_cookies
 
 from .helpers import random_text
-from .models import db, Episode, AudioFile, AudioFormat, Keyword
-from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, UpdateEpisodeForm
+from .models import db, Episode, AudioFormat, AudioFile, Keyword
+from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, \
+    UpdateEpisodeForm
 
 # Configuration
 
@@ -47,6 +48,7 @@ JWT = JWTManager(app)
 db.init_app(app)
 
 # Template formatters
+
 
 def format_datetime(dt, fmt="ymd"):
     """
@@ -87,8 +89,6 @@ app.jinja_env.filters["episode_keywords"] = format_episode_keywords
 app.jinja_env.filters["duration"] = format_duration
 app.jinja_env.filters["markdown"] = markdown.markdown
 
-# Database tables
-# Web routes
 
 # - Front end for users
 
@@ -175,8 +175,10 @@ def episode_create():
         podcast = deepcopy(SETTINGS["podcast"])
         return render_template(
             "admin/create.html", form=form, podcast=podcast, error=error)
-        
-    form = CreateEpisodeForm(SETTINGS["configuration"]["directories"]["media"])
+
+    form = CreateEpisodeForm(
+        SETTINGS["configuration"]["directories"]["media"],
+        pytz.timezone(SETTINGS["configuration"]["timezone"]))
 
     if request.method == "GET":
         return page(form), 200
@@ -209,19 +211,19 @@ def episode_list():
     episodes = Episode.query.order_by(Episode.published.desc()).all()
 
     return render_template(
-        "admin/episodes.html", podcast=podcast, episodes=episodes), 200
+        "admin/list.html", podcast=podcast, episodes=episodes), 200
 
 
 @app.route("/admin/episode/<int:episode_id>", methods=["GET", "POST"])
 @jwt_required
-def episode_admin(episode_id):
+def episode_update(episode_id):
     """
     Allow admin to update episodes
     """
     def page(episode, form):
         podcast = deepcopy(SETTINGS["podcast"])
         return render_template(
-            "admin/episode.html", episode=episode, form=form, podcast=podcast)
+            "admin/update.html", episode=episode, form=form, podcast=podcast)
 
     time_zone = pytz.timezone(SETTINGS["configuration"]["timezone"])
     form = UpdateEpisodeForm(time_zone)
@@ -242,18 +244,25 @@ def episode_admin(episode_id):
     return page(episode, form), 400
 
 
-@app.route("/admin/episode/<int:episode_id>/delete", methods=["POST"])
+@app.route("/admin/episode/<int:episode_id>/delete", methods=["GET", "POST"])
 @jwt_required
 def episode_delete(episode_id):
     """
     Allow admin to delete episodes
     """
-    form = DeleteEpisodeForm()
+    def page(episode, form):
+        podcast = deepcopy(SETTINGS["podcast"])
+        return render_template(
+            "admin/delete.html", episode=episode, form=form, podcast=podcast)
 
+    form = DeleteEpisodeForm()
     episode = Episode.query.filter_by(item_id=episode_id).first()
 
     if episode is None:
         return "Not found", 404
+
+    if request.method == "GET":
+        return page(episode, form), 200
 
     if form.validate_on_submit():
         file_path = os.path.join(
@@ -266,4 +275,4 @@ def episode_delete(episode_id):
 
         return redirect(url_for("episode_list")), 303
 
-    return "Confirmation required", 400
+    return page(episode, form), 400

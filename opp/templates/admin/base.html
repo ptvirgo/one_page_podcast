@@ -6,6 +6,11 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
+    <h1>{{ podcast.title }} Admin</h1>
+    <nav>
+        <a href="{{ url_for('episode_list') }}">All Episodes</a>
+        <a href="{{ url_for('episode_create') }}">New Episode</a>
+    </nav>
     {% block content %}{% endblock %}
     {%- if error %}<p class="error">{{ error }}</p>{% endif %}
   </body>

@@ -208,8 +208,10 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         stored = opp.Episode.query.filter_by(title=episode.title).first()
         self.assertEqual(stored.title, episode.title)
 
-        published = pytz.utc.localize(stored.published)
-        self.assertEqual(published, episode.published)
+        time_zone = pytz.timezone(opp.SETTINGS["configuration"]["timezone"])
+        expect = time_zone.localize(episode.published)
+        got = pytz.utc.localize(stored.published).astimezone(time_zone)
+        self.assertEqual(got, expect)
 
         self.assertEqual(stored.description, episode.description)
         self.assertEqual(stored.explicit, episode.explicit)
@@ -347,8 +349,10 @@ class TestUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         res = opp.Episode.query.filter_by(item_id=item_id).first()
 
         # The right day is required.
-        published = pytz.utc.localize(res.published)
-        self.assertEqual(published, after.published)
+        time_zone = pytz.timezone(opp.SETTINGS["configuration"]["timezone"])
+        expect = time_zone.localize(after.published)
+        got = pytz.utc.localize(res.published).astimezone(time_zone)
+        self.assertEqual(got, expect)
 
         kws = opp.format_episode_keywords(after.keywords)
         make_update(item_id, "keywords", kws)

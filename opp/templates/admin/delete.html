@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}Delete {{ episode.title }}{% endblock %}
+
+{% block content %}
+<h2>Delete {{ episode.title }}?</h2>
+<aside>
+    <p>Published: {{ episode.published|datetime }}</p>
+    <p>Keywords: {{ episode.keywords|episode_keywords }}</p>
+    <p>{{ episode.description }}</p>
+</aside>
+
+<form id="episode-delete" action="{{ url_for('episode_delete', episode_id=episode.item_id) }}" method="POST" enctype="multipart/form-data">
+    <p>{{ form.confirm.label }} {{ form.confirm }}</p>
+    <p><input type="submit" value="Delete {{ episode.title }}" /></p>
+    {%- if form.errors %}
+    <ul>
+        {%- for error in form.errors %}
+        <li class="error">{{ error }}</li>
+        {%- endfor %}
+    </ul>
+    {%- endif %}
+</form>
+{% endblock %}

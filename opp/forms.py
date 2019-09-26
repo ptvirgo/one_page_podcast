@@ -1,4 +1,3 @@
-from datetime import datetime
 import io
 import os
 import pytz
@@ -11,7 +10,8 @@ import wtforms as form
 from wtforms.ext.dateutil.fields import DateTimeField
 import wtforms.validators as validator
 
-from .models import Episode, AudioFile, AudioFormat, Keyword
+from .models import Episode, AudioFile, AudioFormat
+
 
 class LoginForm(FlaskForm):
     """
@@ -50,7 +50,7 @@ class CreateEpisodeForm(FlaskForm):
     title = form.StringField(
         label="Title", validators=[validator.DataRequired()])
     published = DateTimeField(
-        label="Publication date & time", validators=[validator.DataRequired()])
+        label="Publication date", validators=[validator.DataRequired()])
     description = form.StringField(
         label="Description", validators=[validator.DataRequired()])
     explicit = form.BooleanField(
@@ -60,9 +60,10 @@ class CreateEpisodeForm(FlaskForm):
     audio_file = FileField(
         label="Audio file", validators=[FileRequired()])
 
-    def __init__(self, media_dir, *args, **kwargs):
+    def __init__(self, media_dir, time_zone, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.media_dir = media_dir
+        self.time_zone = time_zone
 
     def create_episode(self):
         """Produce the episode described by the form fields"""
@@ -84,9 +85,12 @@ class CreateEpisodeForm(FlaskForm):
         with open(af_path, "wb") as f:
             f.write(af_data)
 
+        published = self.time_zone.localize(self.published.data).astimezone(
+            pytz.utc)
+
         episode = Episode(
             title=self.title.data,
-            published=self.published.data,
+            published=published,
             description=self.description.data,
             explicit=self.explicit.data)
 
@@ -112,7 +116,7 @@ class UpdateEpisodeForm(FlaskForm):
     title = form.StringField(
         label="Title", validators=[validator.Optional()])
     published = DateTimeField(
-        label="Publication date & time", validators=[validator.Optional()])
+        label="Publication date", validators=[validator.Optional()])
     description = form.StringField(
         label="Description", validators=[validator.Optional()])
     explicit = form.BooleanField(
@@ -123,7 +127,7 @@ class UpdateEpisodeForm(FlaskForm):
     def __init__(self, time_zone, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_zone = time_zone
-    
+
     def update_episode(self, episode):
         """Update the given episode"""
         if self.title.data is not None and self.title.data != "":
@@ -137,7 +141,9 @@ class UpdateEpisodeForm(FlaskForm):
         episode.explicit = self.explicit.data
 
         if self.published.data is not None:
-            episode.published = self.published.data
+            zoned = self.time_zone.localize(self.published.data)
+            published = zoned.astimezone(pytz.timezone("utc"))
+            episode.published = published
 
         if self.keywords.data is not None and self.keywords.data != "":
             words = self.keywords.data.split(",")
@@ -151,7 +157,7 @@ class DeleteEpisodeForm(FlaskForm):
     Provide a form to confirm deleting an episode
     """
     confirm = form.BooleanField(
-        label="Are you sure you want to delete this episode?",
+        label="Delete it? Check the box to confirm!",
         false_values=("false", "False", ""))
 
     def validate_confirm(self, field):
