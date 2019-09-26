@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="one_page_podcast",
-    version="0.1.0",
+    version="0.1.1",
     description="Produce a single-page podcast.",
     author="Pablo Virgo",
     author_email="mailbox@pablovirgo.com",
