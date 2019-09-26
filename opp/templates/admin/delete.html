@@ -2,6 +2,7 @@
 {% block title %}Delete {{ episode.title }}{% endblock %}
 
 {% block content %}
+{% include 'admin/nav.html' %}
 <h2>Delete {{ episode.title }}?</h2>
 <aside>
     <p>Published: {{ episode.published|datetime }}</p>

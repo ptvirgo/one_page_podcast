@@ -2,6 +2,7 @@
 {% block title %}{{ episode.title }}{% endblock %}
 
 {% block content %}
+{% include 'admin/nav.html' %}
 <h2>{{ episode.title }}</h2>
 <form id="episode-update" action="{{ url_for('episode_update', episode_id=episode.item_id) }}" method="POST" enctype="multipart/form-data">
     {{ form.csrf_token }}

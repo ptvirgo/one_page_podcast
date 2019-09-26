@@ -1,6 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}New Episode{% endblock %}
 {% block content %}
+{% include 'admin/nav.html' %}
 <h2>New Episode</h2>
 <form action="{{ url_for('episode_create') }}" method="POST" enctype="multipart/form-data">
     {{ form.csrf_token }}
