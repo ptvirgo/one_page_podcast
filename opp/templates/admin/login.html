@@ -1,10 +1,11 @@
 {% extends "admin/base.html" %}
 {% block title %}Log in{% endblock %}
 {% block content %}
+<h2>Login</h2>
 <form action="{{ url_for('login') }}" method="POST">
     {{ form.csrf_token }}
-    <p><label for="username">Username: </label>{{ form.username }}</p>
-    <p><label for="password">Password: </label>{{ form.password }}</p>
+    <p>{{ form.username.label }} {{ form.username }}</p>
+    <p>{{ form.password.label }} {{ form.password }}</p>
     <input type="submit" value="Log in"/>
 </form>
 {% endblock %}

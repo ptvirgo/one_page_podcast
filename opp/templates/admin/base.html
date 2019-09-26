@@ -3,11 +3,21 @@
   <head>
     <meta charset="utf-8">
     <title>{{ podcast.title }}: {% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css?family=PT+Sans|Saira+Condensed&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin/style.css') }}">
   </head>
   <body>
-    <h1>{{ podcast.title }} Admin</h1>
+    <header>
+        <h1>{{ podcast.title }} Admin</h1>
+        <nav>
+            <a href="{{ url_for('login') }}">Admin</a> |
+            {% block nav %}{% endblock %}
+            <a href="{{ url_for('home') }}">Home</a>
+        </nav>
+    </header>
+    <main>
     {% block content %}{% endblock %}
     {%- if error %}<p class="error">{{ error }}</p>{% endif %}
+    </main>
   </body>
 </html>

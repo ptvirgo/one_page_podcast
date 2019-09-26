@@ -1,19 +1,18 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ episode.title }}{% endblock %}
+{% block nav %}{% include 'admin/nav.html' %}{% endblock %}
 
 {% block content %}
-{% include 'admin/nav.html' %}
 <h2>{{ episode.title }}</h2>
 <form id="episode-update" action="{{ url_for('episode_update', episode_id=episode.item_id) }}" method="POST" enctype="multipart/form-data">
     {{ form.csrf_token }}
-    <p>{{ form.title.label }}: {{ form.title(value=episode.title) }}</p>
-    <p>{{ form.published.label }}: <input id="published" name="published" type="date" value="{{ episode.published|datetime }}" /></p>
-    <p>{{ form.description.label }}: {{ form.description(value=episode.description) }}</p>
-    <p>{{ form.keywords.label }}: {{ form.keywords(value=episode.keywords|episode_keywords) }}</p>
-    <p>{{ form.explicit.label }}: {{ form.explicit(value=episode.explicit) }}</p>
+    <p>{{ form.title.label }} {{ form.title(value=episode.title) }}</p>
+    <p>{{ form.published.label }} <input id="published" name="published" type="date" value="{{ episode.published|datetime }}" /></p>
+    <p>{{ form.description.label }} {{ form.description(value=episode.description) }}</p>
+    <p>{{ form.keywords.label }} {{ form.keywords(value=episode.keywords|episode_keywords) }}</p>
+    <p>{{ form.explicit.label }} {{ form.explicit(value=episode.explicit) }}</p>
 
-    <p><input type="submit" value="Update"/></p>
-    <p><a href="{{ url_for('episode_delete', episode_id=episode.item_id) }}">Delete episode</a></p>
+    <input type="submit" value="Update"/>
 </form>
 
 {% endblock %}
