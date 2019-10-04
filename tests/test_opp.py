@@ -3,7 +3,6 @@
 
 from datetime import datetime, timedelta
 import io
-import json
 import os
 import pytz
 import unittest
@@ -49,7 +48,6 @@ class WithDatabase:
                     content_type="multipart/form-data")
 
         return response
-
 
 
 class WithLoggedInClient:
@@ -159,10 +157,10 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         """
         Make sure a login without credentials will get a 401 response
         """
-        self.prove_login_is_invalid({"username":
-            opp.SETTINGS["configuration"]["admin"]["username"]})
-        self.prove_login_is_invalid({"password": 
-            opp.SETTINGS["configuration"]["admin"]["username"]})
+        self.prove_login_is_invalid(
+            {"username": opp.SETTINGS["configuration"]["admin"]["username"]})
+        self.prove_login_is_invalid(
+            {"password": opp.SETTINGS["configuration"]["admin"]["username"]})
         self.prove_login_is_invalid({})
 
 
@@ -179,14 +177,15 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         data = self.new_episode_post_data(episode, bad_data)
 
         with self.logged_in_client() as client:
-            response = client.post("/admin/episode/new", buffered=True, data=data,
-                                   content_type="multipart/form-data")
+            response = client.post(
+                "/admin/episode/new", buffered=True, data=data,
+                content_type="multipart/form-data")
 
         self.assertEqual(response.status, "400 BAD REQUEST")
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"],
-            opp.AudioFile.standardized_name(data["published"], data["title"],
-                                opp.AudioFormat.MP3))
+            opp.AudioFile.standardized_name(
+                data["published"], data["title"], opp.AudioFormat.MP3))
         self.assertFalse(os.path.exists(file_path))
         self.assertIs(opp.Episode.query.filter_by(
             title=data["title"]).first(), None)
@@ -246,6 +245,7 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         file_path = os.path.join(
             opp.SETTINGS["configuration"]["directories"]["media"], fn)
         self.assertFalse(os.path.exists(file_path))
+
 
 class TestRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
@@ -387,7 +387,8 @@ class TestDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
     def test_delete_episode(self):
         """Make sure deleting works"""
         episode = EpisodeFactory()
-        _, path = self.delete_with(episode, {"confirm": True}, self.logged_in_client)
+        _, path = self.delete_with(
+            episode, {"confirm": True}, self.logged_in_client)
 
         ep = opp.Episode.query.filter_by(title=episode.title).first()
         self.assertEqual(ep, None)

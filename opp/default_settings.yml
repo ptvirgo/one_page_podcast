@@ -1,13 +1,14 @@
 # Sensitive
 configuration:
     admin:
-        username: Not yet used
-        password: Not yet used
+        username: better_make_one
+        password: better_make_one
     database_uri: sqlite:///opp.sqlite
     directories:
         media: media
         static: static
         template: templates
+    template_name: default
     timezone: US/Eastern
 
 # Public

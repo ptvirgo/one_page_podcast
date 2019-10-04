@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="one_page_podcast",
-    version="0.1.1",
+    version="0.2.1",
     description="Produce a single-page podcast.",
     author="Pablo Virgo",
     author_email="mailbox@pablovirgo.com",
@@ -10,6 +10,9 @@ setup(
     packages=find_packages(),
     scripts=["opp_manage.py"],
     include_package_data=True,
-    package_data={"opp": ["*.yml", "templates/*", "static/*",
-                          "templates/admin/*", "static/admin/*"]}
+    package_data={"opp": [
+        "*.yml",
+        "templates/*", "templates/admin/*", "templates/default/*",
+        "static/*", "static/admin/*", "static/default/*"
+        ]}
     )

@@ -27,12 +27,14 @@ CFG = os.environ.get("OPP_CONFIG", DEFAULT_CFG)
 with open(CFG, "r") as f:
     SETTINGS = yaml.safe_load(f.read())
 
-app = Flask(__name__,
-            template_folder=SETTINGS["configuration"]["directories"]["template"],
-            static_folder=SETTINGS["configuration"]["directories"]["static"])
+app = Flask(
+    __name__,
+    template_folder=SETTINGS["configuration"]["directories"]["template"],
+    static_folder=SETTINGS["configuration"]["directories"]["static"])
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_DATABASE_URI"] = SETTINGS["configuration"]["database_uri"]
+app.config["SQLALCHEMY_DATABASE_URI"] = \
+    SETTINGS["configuration"]["database_uri"]
 app.config["SECRET_KEY"] = random_text(32)
 
 app.config["JWT_SECRET_KEY"] = random_text(32)
@@ -101,7 +103,8 @@ def home():
         Episode.published < datetime.utcnow())
     podcast = deepcopy(SETTINGS["podcast"])
 
-    return render_template("index.html", podcast=podcast, episodes=episodes)
+    index = "%s/index.html" % SETTINGS["configuration"]["template_name"]
+    return render_template(index, podcast=podcast, episodes=episodes)
 
 
 @app.route("/podcast.xml")
