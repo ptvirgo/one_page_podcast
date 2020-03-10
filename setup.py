@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+import opp
 
 setup(
     name="one_page_podcast",
-    version="0.2.1",
+    version=opp.__version__,
     description="Produce a single-page podcast.",
     author="Pablo Virgo",
     author_email="mailbox@pablovirgo.com",

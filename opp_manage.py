@@ -174,7 +174,7 @@ def add_delete_command(constructor):
     msg = "Delete an episode"
     parser = constructor.add_parser("delete", help=msg, description=msg)
     parser.add_argument("episode_id", type=int,
-        help="ID Number of the episode")
+                        help="ID Number of the episode")
     parser.add_argument("--rm", default=False, action="store_const",
                         const=True, help="Remove the episode audio file")
 

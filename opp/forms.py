@@ -51,7 +51,7 @@ class CreateEpisodeForm(FlaskForm):
         label="Title", validators=[validator.DataRequired()])
     published = DateTimeField(
         label="Publication date", validators=[validator.DataRequired()])
-    description = form.StringField(
+    description = form.TextAreaField(
         label="Description", validators=[validator.DataRequired()])
     explicit = form.BooleanField(
         label="Explicit", false_values=("false", "False", ""))
@@ -117,7 +117,7 @@ class UpdateEpisodeForm(FlaskForm):
         label="Title", validators=[validator.Optional()])
     published = DateTimeField(
         label="Publication date", validators=[validator.Optional()])
-    description = form.StringField(
+    description = form.TextAreaField(
         label="Description", validators=[validator.Optional()])
     explicit = form.BooleanField(
         label="Explicit", false_values=("false", "False", ""))

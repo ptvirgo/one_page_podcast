@@ -62,6 +62,10 @@ input[type="submit"] {
     text-decoration: none;
 }
 
+textarea#description {
+    min-height: 5em;
+}
+
 form, table {
     background-color: #eee;
     border-radius: .5ex;
@@ -89,4 +93,5 @@ td {
 label {
     display: inline-block;
     min-width: 15ex;
+    vertical-align: top;
 }

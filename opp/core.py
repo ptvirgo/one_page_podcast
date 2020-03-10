@@ -13,9 +13,11 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
      set_access_cookies, unset_jwt_cookies
 
 from .helpers import random_text
-from .models import db, Episode, AudioFormat, AudioFile, Keyword
+from .models import db, Episode
 from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, \
     UpdateEpisodeForm
+
+__version__ = "0.2.2"
 
 # Configuration
 
