@@ -8,8 +8,10 @@ import mutagen
 import os
 import shutil
 
-from opp import app, db, DEFAULT_CFG, SETTINGS, AudioFormat, AudioFile, \
-    Episode, Keyword, format_datetime, format_episode_keywords
+from opp import app, db, DEFAULT_CFG, SETTINGS, format_datetime, \
+     format_episode_keywords
+
+from opp.models import AudioFormat, AudioFile, Episode, Keyword
 
 app.app_context().push()
 
