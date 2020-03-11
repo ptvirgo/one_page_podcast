@@ -9,6 +9,7 @@
   <body>
     <header>
         <h1>{{ podcast.title }} Admin</h1>
+        {% if expire %}<!-- Auto log-out at {{ expire }} -->{% endif %}
         <nav>
             {% block nav %}{% endblock %}
             <a href="{{ url_for('home') }}">Home</a>

@@ -10,14 +10,12 @@ import yaml
 from flask import Flask, Response, make_response, redirect, \
     render_template, request, send_from_directory, url_for
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
-     set_access_cookies, unset_jwt_cookies
+     set_access_cookies, unset_jwt_cookies, get_raw_jwt
 
 from .helpers import random_text
 from .models import db, Episode
 from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, \
     UpdateEpisodeForm
-
-__version__ = "0.2.2"
 
 # Configuration
 
@@ -215,8 +213,12 @@ def episode_list():
     podcast = deepcopy(SETTINGS["podcast"])
     episodes = Episode.query.order_by(Episode.published.desc()).all()
 
+    timeout = get_raw_jwt().get("exp", 0)
+    expire = datetime.fromtimestamp(timeout).isoformat()
+
     return render_template(
-        "admin/list.html", podcast=podcast, episodes=episodes), 200
+        "admin/list.html", podcast=podcast, episodes=episodes,
+        expire=expire), 200
 
 
 @app.route("/admin/episode/<int:episode_id>", methods=["GET", "POST"])
