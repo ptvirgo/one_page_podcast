@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 import markdown
 import os
 import pytz
@@ -42,6 +42,7 @@ app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_SECURE"] = False
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/admin"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=30)
 
 app.config["WTF_CSRF_ENABLED"] = False
 
@@ -176,8 +177,12 @@ def episode_create():
     """
     def page(form, error=None):
         podcast = deepcopy(SETTINGS["podcast"])
+        timeout = get_raw_jwt().get("exp", 0)
+        expire = datetime.fromtimestamp(timeout).isoformat()
+
         return render_template(
-            "admin/create.html", form=form, podcast=podcast, error=error)
+            "admin/create.html", form=form, podcast=podcast, error=error,
+            expire=expire)
 
     form = CreateEpisodeForm(
         SETTINGS["configuration"]["directories"]["media"],
@@ -229,8 +234,13 @@ def episode_update(episode_id):
     """
     def page(episode, form):
         podcast = deepcopy(SETTINGS["podcast"])
+
+        timeout = get_raw_jwt().get("exp", 0)
+        expire = datetime.fromtimestamp(timeout).isoformat()
+
         return render_template(
-            "admin/update.html", episode=episode, form=form, podcast=podcast)
+            "admin/update.html", episode=episode, form=form, podcast=podcast,
+            expire=expire)
 
     time_zone = pytz.timezone(SETTINGS["configuration"]["timezone"])
     form = UpdateEpisodeForm(time_zone)
@@ -259,8 +269,12 @@ def episode_delete(episode_id):
     """
     def page(episode, form):
         podcast = deepcopy(SETTINGS["podcast"])
+        timeout = get_raw_jwt().get("exp", 0)
+        expire = datetime.fromtimestamp(timeout).isoformat()
+
         return render_template(
-            "admin/delete.html", episode=episode, form=form, podcast=podcast)
+            "admin/delete.html", episode=episode, form=form, podcast=podcast,
+            expire=expire)
 
     form = DeleteEpisodeForm()
     episode = Episode.query.filter_by(item_id=episode_id).first()
