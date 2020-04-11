@@ -10,10 +10,5 @@ setup(
     url="https://github.com/ptvirgo/one_page_podcast",
     packages=find_packages(),
     scripts=["opp_manage.py"],
-    include_package_data=True,
-    package_data={"opp": [
-        "*.yml",
-        "templates/*", "templates/admin/*", "templates/default/*",
-        "static/*", "static/admin/*", "static/default/*"
-        ]}
+    include_package_data=True
     )

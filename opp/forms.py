@@ -11,6 +11,7 @@ from wtforms.ext.dateutil.fields import DateTimeField
 import wtforms.validators as validator
 
 from .models import Episode, AudioFile, AudioFormat
+from .helpers import Auth
 
 
 class LoginForm(FlaskForm):
@@ -22,25 +23,13 @@ class LoginForm(FlaskForm):
     password = form.PasswordField(
         label="Password", validators=[validator.DataRequired()])
 
-    def __init__(self, expect_user, expect_pass, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def validate(self, *args, **kwargs):
+        """Validate the login."""
+        if not super().validate(*args, **kwargs):
+            return False
 
-        # Will likely want to work hashing into the OPP settings, but at least
-        # keep these off anything exposed to front-end templates
-        self._expect_user = hashlib.sha256(expect_user.encode()).hexdigest()
-        self._expect_pass = hashlib.sha256(expect_pass.encode()).hexdigest()
-
-    def validate_username(self, field):
-        """Require the correct username"""
-        username = hashlib.sha256(field.data.encode()).hexdigest()
-        if username != self._expect_user:
-            raise validator.ValidationError("Invalid credentials")
-
-    def validate_password(self, field):
-        """Require the correct password"""
-        password = hashlib.sha256(field.data.encode()).hexdigest()
-        if password != self._expect_pass:
-            raise validator.ValidationError("Invalid credentials")
+        auth = Auth()
+        return auth.valid(self.username.data, self.password.data)
 
 
 class CreateEpisodeForm(FlaskForm):
@@ -63,7 +52,10 @@ class CreateEpisodeForm(FlaskForm):
     def __init__(self, media_dir, time_zone, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.media_dir = media_dir
+        self.media_dir.mkdir(parents=True, exist_ok=True)
+
         self.time_zone = time_zone
+
 
     def create_episode(self):
         """Produce the episode described by the form fields"""
@@ -80,9 +72,9 @@ class CreateEpisodeForm(FlaskForm):
         af_name = AudioFile.standardized_name(
             self.published.data, self.title.data, af_format)
 
-        af_path = os.path.join(self.media_dir, af_name)
+        af_path = self.media_dir / af_name
 
-        with open(af_path, "wb") as f:
+        with af_path.open("wb") as f:
             f.write(af_data)
 
         published = self.time_zone.localize(self.published.data).astimezone(
@@ -97,7 +89,7 @@ class CreateEpisodeForm(FlaskForm):
         audio_file = AudioFile(
             file_name=af_name,
             audio_format=af_format,
-            length=os.path.getsize(af_path),
+            length=af_path.stat().st_size,
             duration=round(af.info.length))
 
         episode.audio_file = audio_file

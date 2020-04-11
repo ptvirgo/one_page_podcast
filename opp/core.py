@@ -4,37 +4,30 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 import markdown
 import os
+from pathlib import Path
 import pytz
-import yaml
 
 from flask import Flask, Response, make_response, redirect, \
     render_template, request, send_from_directory, url_for
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, \
      set_access_cookies, unset_jwt_cookies, get_raw_jwt
 
-from .helpers import random_text
+from .helpers import random_text, load_settings
 from .models import db, Episode
 from .forms import LoginForm, CreateEpisodeForm, DeleteEpisodeForm, \
     UpdateEpisodeForm
 
 # Configuration
 
-DEFAULT_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "default_settings.yml")
-
-CFG = os.environ.get("OPP_CONFIG", DEFAULT_CFG)
-
-with open(CFG, "r") as f:
-    SETTINGS = yaml.safe_load(f.read())
-
+SETTINGS = load_settings()
 app = Flask(
     __name__,
-    template_folder=SETTINGS["configuration"]["directories"]["template"],
-    static_folder=SETTINGS["configuration"]["directories"]["static"])
+    template_folder=str(SETTINGS["config"]["path"]["template"]),
+    static_folder=str(SETTINGS["config"]["path"]["static"]))
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = \
-    SETTINGS["configuration"]["database_uri"]
+     SETTINGS["config"]["database_uri"]
 app.config["SECRET_KEY"] = random_text(32)
 
 app.config["JWT_SECRET_KEY"] = random_text(32)
@@ -153,9 +146,7 @@ def login():
         unset_jwt_cookies(resp)
         return resp, status
 
-    username = SETTINGS["configuration"]["admin"]["username"]
-    password = SETTINGS["configuration"]["admin"]["password"]
-    form = LoginForm(username, password)
+    form = LoginForm()
 
     if request.method == "GET":
         return login_page(form)
@@ -185,8 +176,7 @@ def episode_create():
             expire=expire)
 
     form = CreateEpisodeForm(
-        SETTINGS["configuration"]["directories"]["media"],
-        pytz.timezone(SETTINGS["configuration"]["timezone"]))
+        SETTINGS["config"]["path"]["media"], SETTINGS["config"]["timezone"])
 
     if request.method == "GET":
         return page(form), 200
@@ -199,8 +189,7 @@ def episode_create():
             db.session.commit()
         except Exception as error:
             app.logger.error("Failed to save episode: %s" % str(error))
-            file_path = os.path.join(form.media_dir,
-                                     episode.audio_file.file_name)
+            file_path = form.media_dir / episode.audio_file.file_name
             os.remove(file_path)
             return page(form, error="Failed to save episode, see log"), 500
 

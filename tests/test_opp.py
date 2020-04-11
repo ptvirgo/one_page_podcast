@@ -4,15 +4,25 @@
 from datetime import datetime, timedelta
 import io
 import os
+from pathlib import Path
 import pytz
 import unittest
 import random
 
+# Flask's app structure means we have to set these up before importing
+base = Path(__file__).parent.parent.absolute() / "default"
+os.environ["OPP_DATABASE"] = "sqlite:///"
+os.environ["OPP_DIR"] = str(base)
+os.environ["OPP_CONFIG"] = str(base / "opp_settings.yml")
+
 import opp
+from opp import helpers
+from opp import models
 
 from .factories import EpisodeFactory
 
-TEST_PATH = os.path.dirname(os.path.abspath(__file__))
+
+TEST_PATH = Path(__file__).parent.absolute()
 
 opp.app.app_context().push()
 if opp.db.engine.has_table("episode"):
@@ -37,9 +47,9 @@ class WithDatabase:
 
     def create_test_episode(self, episode, Client):
         """Create the test episode"""
-        fn = os.path.join(TEST_PATH, "data", "episode_01.opus")
+        fn = TEST_PATH / "data" / "episode_01.opus"
 
-        with open(fn, "rb") as audio_file:
+        with fn.open("rb") as audio_file:
             data = self.new_episode_post_data(episode, audio_file)
 
             with Client() as client:
@@ -54,13 +64,21 @@ class WithLoggedInClient:
     """
     Provide a TestCase with an authenticated client
     """
+    @classmethod
+    def setUpClass(self, *args, **kwargs):
+        super().setUpClass(*args, **kwargs)
+        self.username = helpers.random_text(8)
+        self.password = helpers.random_text(8)
+
+        os.environ["OPP_USER"] = self.username
+        os.environ["OPP_PASS"] = self.password
+
+    @classmethod
     def logged_in_client(self):
         """
         Return a logged in client
         """
-        username = opp.SETTINGS["configuration"]["admin"]["username"]
-        password = opp.SETTINGS["configuration"]["admin"]["password"]
-        data = {"username": username, "password": password}
+        data = {"username": self.username, "password": self.password}
 
         client = opp.app.test_client()
         client.post("/admin/login", data=data)
@@ -89,12 +107,23 @@ class TestHelpers(unittest.TestCase):
     """
     Test helpers
     """
+    def test_auth(self):
+        """Minimally verify user auth"""
+        os.environ["OPP_USER"] = "correct user"
+        os.environ["OPP_PASS"] = "correct pass"
+
+        auth = helpers.Auth()
+        self.assertTrue(auth.valid("correct user", "correct pass"))
+        self.assertFalse(auth.valid("incorrect user", "correct pass"))
+        self.assertFalse(auth.valid("correct user", "incorrect pass"))
+        self.assertFalse(auth.valid("incorrect user", "incorrect pass"))
+
     def test_audio_file_name(self):
         published = datetime(2019, 9, 2, 22, 50, 15)
         title = "It could / couldn't be the title, etc."
-        af_format = opp.AudioFormat.MP3
+        af_format = models.AudioFormat.MP3
 
-        self.assertEqual(opp.AudioFile.standardized_name(
+        self.assertEqual(models.AudioFile.standardized_name(
             published, title, af_format),
             "2019-09-02-it_could_couldnt_be_the_title_etc.mp3")
 
@@ -122,8 +151,8 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         Make sure a correct login will work.
         """
         login = {
-            "username": opp.SETTINGS["configuration"]["admin"]["username"],
-            "password": opp.SETTINGS["configuration"]["admin"]["password"]
+            "username": self.username,
+            "password": self.password
         }
 
         with opp.app.test_client() as client:
@@ -157,10 +186,8 @@ class TestLogin(WithDatabase, WithLoggedInClient, unittest.TestCase):
         """
         Make sure a login without credentials will get a 401 response
         """
-        self.prove_login_is_invalid(
-            {"username": opp.SETTINGS["configuration"]["admin"]["username"]})
-        self.prove_login_is_invalid(
-            {"password": opp.SETTINGS["configuration"]["admin"]["username"]})
+        self.prove_login_is_invalid({"username": self.username})
+        self.prove_login_is_invalid({"password": self.password})
         self.prove_login_is_invalid({})
 
 
@@ -182,11 +209,12 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
                 content_type="multipart/form-data")
 
         self.assertEqual(response.status, "400 BAD REQUEST")
-        file_path = os.path.join(
-            opp.SETTINGS["configuration"]["directories"]["media"],
-            opp.AudioFile.standardized_name(
-                data["published"], data["title"], opp.AudioFormat.MP3))
-        self.assertFalse(os.path.exists(file_path))
+
+        file_name = models.AudioFile.standardized_name(
+            data["published"], data["title"], models.AudioFormat.MP3)
+        file_path = opp.SETTINGS["config"]["path"]["media"] / file_name
+
+        self.assertFalse(file_path.exists())
         self.assertIs(opp.Episode.query.filter_by(
             title=data["title"]).first(), None)
 
@@ -207,7 +235,7 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         stored = opp.Episode.query.filter_by(title=episode.title).first()
         self.assertEqual(stored.title, episode.title)
 
-        time_zone = pytz.timezone(opp.SETTINGS["configuration"]["timezone"])
+        time_zone = opp.SETTINGS["config"]["timezone"]
         expect = time_zone.localize(episode.published)
         got = pytz.utc.localize(stored.published).astimezone(time_zone)
         self.assertEqual(got, expect)
@@ -216,12 +244,11 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         self.assertEqual(stored.explicit, episode.explicit)
 
         # File created?
-        fn = opp.AudioFile.standardized_name(
-            episode.published, episode.title, opp.AudioFormat.OggOpus)
-        file_path = os.path.join(
-            opp.SETTINGS["configuration"]["directories"]["media"], fn)
-        self.assertTrue(os.path.exists(file_path))
-        os.remove(file_path)
+        fn = models.AudioFile.standardized_name(
+            episode.published, episode.title, models.AudioFormat.OggOpus)
+        file_path = opp.SETTINGS["config"]["path"]["media"] / fn
+        self.assertTrue(file_path.exists())
+        file_path.unlink()
 
     def test_create_requires_login(self):
         """
@@ -240,11 +267,10 @@ class TestCreate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         self.assertIs(
             opp.Episode.query.filter_by(title=episode.title).first(), None)
 
-        fn = opp.AudioFile.standardized_name(
-            episode.published, episode.title, opp.AudioFormat.OggOpus)
-        file_path = os.path.join(
-            opp.SETTINGS["configuration"]["directories"]["media"], fn)
-        self.assertFalse(os.path.exists(file_path))
+        fn = models.AudioFile.standardized_name(
+            episode.published, episode.title, models.AudioFormat.OggOpus)
+        file_path = opp.SETTINGS["config"]["path"]["media"] / fn
+        self.assertFalse(file_path.exists())
 
 
 class TestRead(WithDatabase, WithLoggedInClient, unittest.TestCase):
@@ -372,11 +398,10 @@ class TestDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
         item_id = ep.item_id
         self.assertIsNot(item_id, None)
 
-        path = os.path.join(
-            opp.SETTINGS["configuration"]["directories"]["media"],
-            ep.audio_file.file_name)
+        path = opp.SETTINGS["config"]["path"]["media"] \
+            / ep.audio_file.file_name
 
-        self.assertTrue(os.path.exists(path))
+        self.assertTrue(path.exists())
 
         with Client() as client:
             response = client.post("/admin/episode/%d/delete" % item_id,
@@ -392,7 +417,7 @@ class TestDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         ep = opp.Episode.query.filter_by(title=episode.title).first()
         self.assertEqual(ep, None)
-        self.assertFalse(os.path.exists(path))
+        self.assertFalse(path.exists())
 
     def test_delete_requires_confirmation(self):
         """Make sure deleting without confirmation doesn't"""
@@ -400,5 +425,5 @@ class TestDelete(WithDatabase, WithLoggedInClient, unittest.TestCase):
         _, path = self.delete_with(episode, {}, self.logged_in_client)
         ep = opp.Episode.query.filter_by(title=episode.title).first()
         self.assertIsNot(ep, None)
-        self.assertTrue(os.path.exists(path))
-        os.remove(path)
+        self.assertTrue(path.exists())
+        path.unlink()
