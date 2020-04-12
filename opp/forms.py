@@ -1,7 +1,5 @@
 import io
-import os
 import pytz
-import hashlib
 import mutagen
 
 from flask_wtf import FlaskForm
@@ -55,7 +53,6 @@ class CreateEpisodeForm(FlaskForm):
         self.media_dir.mkdir(parents=True, exist_ok=True)
 
         self.time_zone = time_zone
-
 
     def create_episode(self):
         """Produce the episode described by the form fields"""

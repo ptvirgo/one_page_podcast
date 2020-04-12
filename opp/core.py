@@ -4,7 +4,6 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 import markdown
 import os
-from pathlib import Path
 import pytz
 
 from flask import Flask, Response, make_response, redirect, \
@@ -54,7 +53,7 @@ def format_datetime(dt, fmt="ymd"):
         "ymd": "%Y-%m-%d",
         "rfc822": "%a, %d %b %Y %H:%M:%S %z"}
     dt = pytz.timezone("utc").localize(dt)
-    local = pytz.timezone(SETTINGS["configuration"]["timezone"])
+    local = SETTINGS["config"]["timezone"]
     return dt.astimezone(local).strftime(formats[fmt])
 
 
@@ -231,7 +230,7 @@ def episode_update(episode_id):
             "admin/update.html", episode=episode, form=form, podcast=podcast,
             expire=expire)
 
-    time_zone = pytz.timezone(SETTINGS["configuration"]["timezone"])
+    time_zone = SETTINGS["config"]["timezone"]
     form = UpdateEpisodeForm(time_zone)
     episode = Episode.query.filter_by(item_id=episode_id).first()
 
@@ -275,13 +274,12 @@ def episode_delete(episode_id):
         return page(episode, form), 200
 
     if form.validate_on_submit():
-        file_path = os.path.join(
-            SETTINGS["configuration"]["directories"]["media"],
-            episode.audio_file.file_name)
+        file_path = SETTINGS["config"]["path"]["media"] \
+            / episode.audio_file.file_name
 
         db.session.delete(episode)
         db.session.commit()
-        os.remove(file_path)
+        file_path.unlink()
 
         return redirect(url_for("episode_list")), 303
 

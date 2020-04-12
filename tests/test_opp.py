@@ -25,12 +25,8 @@ from .factories import EpisodeFactory
 TEST_PATH = Path(__file__).parent.absolute()
 
 opp.app.app_context().push()
-if opp.db.engine.has_table("episode"):
-    raise RuntimeError("Previous database exists.  If you're sure you're "
-                       "using a test database, delete it.")
-else:
-    opp.app.testing = True
-    opp.app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+opp.app.testing = True
+opp.app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 
 
 class WithDatabase:
@@ -359,7 +355,7 @@ class TestUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
 
         # WTForms converts BooleanFields to false when they are absent from a
         # form input.  In production, the value for "explicit" must always be
-        # submitted explicitly.
+        # submitted ... explicitly.
         expect.pop("explicit")
 
         after = EpisodeFactory(explicit=not ep.explicit)
@@ -375,7 +371,7 @@ class TestUpdate(WithDatabase, WithLoggedInClient, unittest.TestCase):
         res = opp.Episode.query.filter_by(item_id=item_id).first()
 
         # The right day is required.
-        time_zone = pytz.timezone(opp.SETTINGS["configuration"]["timezone"])
+        time_zone = opp.SETTINGS["config"]["timezone"]
         expect = time_zone.localize(after.published)
         got = pytz.utc.localize(res.published).astimezone(time_zone)
         self.assertEqual(got, expect)
