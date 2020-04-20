@@ -12,6 +12,23 @@ import yaml
 # - contain no free variables: all variables are bound in the function head
 # - not mutate their inputs
 
+default_cfg = {
+    "title": "One Page Podcast",
+    "subtitle": "A podcast on a single page.",
+    "description": """
+    You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).
+    You don't need *anything* else.
+
+    Boom.""",
+    "link": "http://example.com",
+    "author": "Yours Truly",
+    "email": "yt@example.com",
+    "language": "en-us",
+    "explicit": "no",
+    "keywords": ["podcast"],
+    "category": "Education"
+}
+
 
 def random_text(n):
     """
@@ -57,8 +74,11 @@ def load_settings():
     loc = os.environ.get("OPP_CONFIG", "/etc/one_page_podcast.yml")
     path = Path(loc)
 
-    with path.open() as f:
-        podcast = yaml.safe_load(f.read())
+    if path.exists():
+        with path.open() as f:
+            podcast = yaml.safe_load(f.read())
+    else:
+        podcast = default_cfg
 
     return {"config": config, "podcast": podcast}
 
