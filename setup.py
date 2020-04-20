@@ -9,6 +9,8 @@ setup(
     author_email="mailbox@pablovirgo.com",
     url="https://github.com/ptvirgo/one_page_podcast",
     packages=find_packages(),
-    scripts=["opp_manage.py"],
+    entry_points={
+        "console_scripts": ["opp_manage=opp.__main__:main"]
+    },
     include_package_data=True
     )
