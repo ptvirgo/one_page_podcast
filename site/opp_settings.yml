@@ -8,7 +8,7 @@ link: http://example.com
 author: Yours Truly
 email: yt@example.com
 language: en-us
-explicit: no
+explicit: false
 keywords:
     - podcast
 category: Education
