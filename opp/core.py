@@ -96,8 +96,7 @@ def home():
         Episode.published < datetime.utcnow())
     podcast = deepcopy(SETTINGS["podcast"])
 
-    index = "%s/index.html" % SETTINGS["configuration"]["template_name"]
-    return render_template(index, podcast=podcast, episodes=episodes)
+    return render_template("index.html", podcast=podcast, episodes=episodes)
 
 
 @app.route("/podcast.xml")
@@ -122,7 +121,7 @@ def rss():
 @app.route("/media/<path:filename>")
 def media(filename):
     return send_from_directory(
-        SETTINGS["configuration"]["directories"]["media"],
+        str(SETTINGS["config"]["path"]["media"]),
         filename, as_attachment=False)
 
 
@@ -279,7 +278,9 @@ def episode_delete(episode_id):
 
         db.session.delete(episode)
         db.session.commit()
-        file_path.unlink()
+
+        if file_path.exists():
+            file_path.unlink()
 
         return redirect(url_for("episode_list")), 303
 

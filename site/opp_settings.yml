@@ -1,14 +1,15 @@
-title: One Page Podcast
-subtitle: A podcast on a single page
-description: |-
-    You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).  You don't need *anything* else.
-
-    Boom.
-link: http://example.com
 author: Yours Truly
+category: Education
+description: |-
+  You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).
+  You don''t need *anything* else.
+
+  Boom.
 email: yt@example.com
-language: en-us
 explicit: false
 keywords:
-    - podcast
-category: Education
+- podcast
+language: en-us
+link: http://example.com
+subtitle: A podcast on a single page.
+title: One Page Podcast

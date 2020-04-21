@@ -16,15 +16,15 @@ default_cfg = {
     "title": "One Page Podcast",
     "subtitle": "A podcast on a single page.",
     "description": """
-    You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).
-    You don't need *anything* else.
+You want to host your own [podcast](https://en.wikipedia.org/wiki/Podcast).
+You don't need *anything* else.
 
-    Boom.""",
+Boom.""",
     "link": "http://example.com",
     "author": "Yours Truly",
     "email": "yt@example.com",
     "language": "en-us",
-    "explicit": "no",
+    "explicit": False,
     "keywords": ["podcast"],
     "category": "Education"
 }
@@ -78,7 +78,7 @@ def load_settings():
         with path.open() as f:
             podcast = yaml.safe_load(f.read())
     else:
-        podcast = default_cfg
+        podcast = None
 
     return {"config": config, "podcast": podcast}
 

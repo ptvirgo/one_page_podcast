@@ -2,13 +2,11 @@
     <channel>
         <title>{{ podcast.title }}</title>
         <link>{{ podcast.link }}</link>
-        {% if podcast.image %}
         <image>
-            <url>{{ url_for('media', filename=podcast.image, _external=True) }}</url>
+            <url>{{ url_for('static', filename='podcast.png', _external=True) }}</url>
             <title>{{ podcast.title }}</title>
             <link>{{ podcast.link }}</link>
         </image>
-        {% endif %}
         <description>
             {{ podcast.description }}
         </description>
@@ -29,7 +27,7 @@
         <itunes:keywords>
             {{ ",".join(podcast.keywords) }}
         </itunes:keywords>
-        <itunes:image href="{{ url_for('media', filename=podcast.image, _external=True) }}"/>
+        <itunes:image href="{{ url_for('static', filename='podcast.png', _external=True) }}"/>
         <itunes:category text="{{ podcast.category }}"/>
         <pubDate>{{ podcast.published|datetime("rfc822") }}</pubDate>
 
