@@ -204,3 +204,22 @@ class TestAdministrator:
 
         for i in range(count):
             check_episode(results[i], expects[i])
+
+    def test_update_channel(self):
+        datastore = AdministratorTestStore()
+        admin_interface = administrator.AdminPodcast(datastore)
+        new = factories.ChannelFactory()
+
+        admin_interface.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
+        result = admin_interface.get_channel()
+
+        assert result["title"] == new.title
+        assert result["link"] ==new.link
+        assert result["description"] == new.description
+        assert result["image"] == new.image
+        assert result["author"] == new.author
+        assert result["email"] == new.email
+        assert result["language"] == new.language
+        assert result["category"] == new.category
+        assert result["explicit"] == new.explicit
+        assert result["keywords"] == new.keywords

@@ -96,7 +96,29 @@ class AdminPodcast:
         return channel.as_dict()
 
     def update_channel(self, title=None, link=None, description=None, image=None, author=None, email=None, language=None, category=None, explicit=None, keywords=None):
-        pass
+
+        previous = as_channel(self.datastore.get_channel())
+
+        if explicit is None:
+            explicit = previous.explicit
+
+        if keywords is None:
+            kepwords = previous.keywords
+
+        new = Channel(
+            title or previous.title,
+            link or previous.link,
+            description or previous.description,
+            image or previous.image,
+            author or previous.author,
+            email or previous.email,
+            language or previous.language,
+            category or previous.category,
+            explicit,
+            keywords
+        )
+
+        self.datastore.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
 
     def create_episode(self, title, link, description, guid, duration, enclosure, pubDate, image=None):
         """Save a new episode."""
