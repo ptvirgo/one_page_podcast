@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from opp.podcast import Episode
+from opp.podcast import Episode, Enclosure, AudioFormat
 
 import opp.administrator as administrator
 import opp.visitor as visitor
@@ -76,7 +76,6 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         """Produce the podcast.Channel."""
         return self._channel.as_dict()
 
-
     def update_channel(self, title=None, link=None, description=None, image=None, author=None, email=None, language=None, category=None, explicit=None, keywords=None):
         """Update the externally stored podcast channel information."""
 
@@ -110,20 +109,19 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         if type(keywords) is list:
             self._channel.keywords = keywords
 
-
-    def create_episode(self, title, link, description, guid, duration, enclosure, pubDate, image=None):
+    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
         """Save a new episode."""
+        enclosure = Enclosure(file_name, AudioFormat(audio_format), length)
         episode = Episode(title, link, description, guid, duration, enclosure, pubDate, image)
+
         self._episodes.append(episode)
         self._episodes.sort(key=lambda x: x.pubDate)
-
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
         return [ ep.as_dict() for ep in self._episodes ]
 
-
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, enclosure=None, pubDate=None, image=None):
+    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
 
         episode = None
@@ -147,15 +145,20 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         if duration is not None:
             episode.duration = duration
 
-        if enclosure is not None:
-            episode.enclosure = enclosure
-
         if pubDate is not None:
             episode.pubDate = pubDate
 
         if image is not None:
             episode.image = image
 
+        if file_name is not None:
+            episode.enclosure.file_name = file_name
+
+        if audio_format is not None:
+            episode.enclosure.audio_format = AudioFormat(audio_format)
+
+        if length is not None:
+            episode.enclosure.length = length
 
     def delete_episode(self, guid):
         """Delete an episode."""
@@ -223,3 +226,26 @@ class TestAdministrator:
         assert result["category"] == new.category
         assert result["explicit"] == new.explicit
         assert result["keywords"] == new.keywords
+
+    def test_create_episode(self):
+        datastore = AdministratorTestStore(2)
+        admin_interface = administrator.AdminPodcast(datastore)
+        new = factories.EpisodeFactory()
+
+        admin_interface.create_episode(new.title, new.link, new.description, new.guid, new.duration, new.pubDate, new.enclosure.file_name, new.enclosure.audio_format.value, new.enclosure.length, image=new.image)
+
+        result = None
+
+        for episode in datastore._episodes:
+            if episode.guid == new.guid:
+                result = episode
+
+        assert result.as_dict() == new.as_dict()
+
+    def test_update_episode(self):
+        datastore = AdministratorTestStore(3)
+        admin_interface = administrator.AdminPodcast(datastore)
+
+        prev = datastore._episodes[1]
+        new = factories.EpisodeFactory()
+

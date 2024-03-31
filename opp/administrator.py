@@ -21,13 +21,13 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def update_channel(self, title=None, link=None, description=None, image=None, author=None, email=None, language=None, category=None, explicit=None, keywords=None):
+    def update_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Update the externally stored podcast channel information."""
         pass
 
 
     @abstractmethod
-    def create_episode(self, title, link, description, guid, duration, enclosure, pubDate, image=None):
+    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
         """Save a new episode."""
         pass
 
@@ -37,13 +37,13 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, enclosure=None, pubDate=None, image=None):
+    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
         pass
 
     @abstractmethod
     def delete_episode(self, guid):
-        """Delete an episode."""
+        """Delete an episode.""show " = """
         pass
 
 
@@ -120,18 +120,22 @@ class AdminPodcast:
 
         self.datastore.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
 
-    def create_episode(self, title, link, description, guid, duration, enclosure, pubDate, image=None):
+    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
         """Save a new episode."""
-        pass
+
+        enclosure = Enclosure(file_name, AudioFormat(audio_format), length)
+        new = Episode(title, link, description, guid, duration, enclosure, pubDate, image=image)
+
+        self.datastore.create_episode(new.title, new.link, new.description, new.guid, new.duration, new.pubDate, new.enclosure.file_name, new.enclosure.audio_format.value, new.enclosure.length, image=new.image)
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
         episodes = [ as_episode(ep) for ep in self.datastore.get_episodes() ]
         return [ ep.as_dict() for ep in episodes ]
 
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, enclosure=None, pubDate=None, image=None):
+    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
-        pass
+        self.datastore.update_episode(guid, title=title, link=link, description=description, duration=duration, pubDate=pubDate, file_name=file_name, audio_format=audio_format, length=length, image=image)
 
     def delete_episode(self, guid):
         """Delete an episode."""
