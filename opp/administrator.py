@@ -135,8 +135,12 @@ class AdminPodcast:
 
     def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
+
+        if pubDate is not None:
+            pubDate = date.fromisoformat(pubDate)
+
         self.datastore.update_episode(guid, title=title, link=link, description=description, duration=duration, pubDate=pubDate, file_name=file_name, audio_format=audio_format, length=length, image=image)
 
     def delete_episode(self, guid):
         """Delete an episode."""
-        pass
+        self.datastore.delete_episode(guid)

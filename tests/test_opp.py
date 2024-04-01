@@ -249,3 +249,40 @@ class TestAdministrator:
         prev = datastore._episodes[1]
         new = factories.EpisodeFactory()
 
+        admin_interface.update_episode(prev.guid, title=new.title)
+        assert prev.title == new.title
+
+        admin_interface.update_episode(prev.guid, link=new.link)
+        assert prev.link == new.link
+
+        admin_interface.update_episode(prev.guid, description=new.description)
+        assert prev.description == new.description
+
+        admin_interface.update_episode(prev.guid, duration=new.duration)
+        assert prev.duration == new.duration
+
+        admin_interface.update_episode(prev.guid, pubDate=new.pubDate.isoformat())
+        assert prev.pubDate == new.pubDate
+
+        admin_interface.update_episode(prev.guid, image=new.image)
+        assert prev.image == new.image
+
+        admin_interface.update_episode(prev.guid, file_name=new.enclosure.file_name)
+        assert prev.enclosure.file_name == new.enclosure.file_name
+
+        admin_interface.update_episode(prev.guid, audio_format=new.enclosure.audio_format.value)
+        assert prev.enclosure.audio_format == new.enclosure.audio_format
+
+        admin_interface.update_episode(prev.guid, length=new.enclosure.length)
+        assert prev.enclosure.length == new.enclosure.length
+
+
+    def test_delete_episode(self):
+        datastore = AdministratorTestStore(3)
+        admin_interface = administrator.AdminPodcast(datastore)
+
+        guid = datastore._episodes[1].guid
+        admin_interface.delete_episode(guid)
+
+        for episode in datastore._episodes:
+            assert episode.guid != guid
