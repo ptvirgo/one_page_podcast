@@ -60,50 +60,13 @@ class PodcastDatastore(ABC):
         """
         pass
 
-def as_channel(channel_input):
-    return Channel(
-            channel_input["title"],
-            channel_input["link"],
-            channel_input["description"],
-            channel_input["image"],
-            channel_input["author"],
-            email=channel_input["email"],
-            language=channel_input["language"],
-            category=channel_input["category"],
-            explicit=channel_input["explicit"],
-            keywords=channel_input["keywords"]
-        )
-
-
-def as_episode(ep):
-    enclosure = Enclosure(
-            ep["file_name"],
-            AudioFormat(ep["audio_format"]),
-            ep["length"]
-        )
-
-    episode = Episode(
-            ep["title"],
-            ep["link"],
-            ep["description"],
-            ep["guid"],
-            ep["duration"],
-            enclosure,
-            date.fromisoformat(ep["pubDate"]),
-            image=ep["image"]
-        )
-
-    return episode
-
 
 class VisitPodcast:
 
     def __init__(self, loader):
         self.loader = loader
-        self.channel = as_channel(self.loader.get_channel())
-        self.episodes = [ as_episode(x) for x in self.loader.get_episodes() ]
-
-    # You probably think the conversion to a dict is not very DRY. However, the purpose of this layer is to create a dependency inversion and establish a boundary between the (tiny) core application and the I/O layers. Clean Architecture, pp 189.
+        self.channel = self.loader.get_channel()
+        self.episodes = self.loader.get_episodes()
 
     def podcast_data(self):
         """Produce a dict of all fields needed to follow the podcast."""
@@ -122,5 +85,5 @@ class VisitPodcast:
                     "explicit": self.channel.explicit,
                     "keywords": self.channel.keywords
                 },
-                "episodes": [ e.as_dict() for e in self.episodes ]
+                "episodes": [ dict(ep) for ep in self.episodes ]
             }

@@ -16,6 +16,11 @@ class PodcastDatastore(ABC):
     """Provide a dependency inversion layer so that arbitrary data-storage backends can be made compatible with the administrator's use-cases."""
 
     @abstractmethod
+    def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
+        """Initialize a new channel."""
+        pass
+
+    @abstractmethod
     def get_channel(self):
         """Produce the podcast.Channel."""
         pass
@@ -47,43 +52,6 @@ class PodcastDatastore(ABC):
         pass
 
 
-
-def as_channel(channel_input):
-    return Channel(
-            channel_input["title"],
-            channel_input["link"],
-            channel_input["description"],
-            channel_input["image"],
-            channel_input["author"],
-            email=channel_input["email"],
-            language=channel_input["language"],
-            category=channel_input["category"],
-            explicit=channel_input["explicit"],
-            keywords=channel_input["keywords"]
-        )
-
-
-def as_episode(ep):
-    enclosure = Enclosure(
-            ep["file_name"],
-            AudioFormat(ep["audio_format"]),
-            ep["length"]
-        )
-
-    episode = Episode(
-            ep["title"],
-            ep["link"],
-            ep["description"],
-            ep["guid"],
-            ep["duration"],
-            enclosure,
-            date.fromisoformat(ep["pubDate"]),
-            image=ep["image"]
-        )
-
-    return episode
-
-
 class AdminPodcast:
 
     """Provide the high level CRUD related use-case interface for the administrative user."""
@@ -91,13 +59,18 @@ class AdminPodcast:
     def __init__(self, datastore):
         self.datastore = datastore
 
+
+    def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
+        channel = Channel(title, link, description, image, author, email, language, category, explicit, keywords)
+        self.datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+
     def get_channel(self):
-        channel = as_channel(self.datastore.get_channel())
-        return channel.as_dict()
+        channel = self.datastore.get_channel()
+        return dict(channel)
 
     def update_channel(self, title=None, link=None, description=None, image=None, author=None, email=None, language=None, category=None, explicit=None, keywords=None):
 
-        previous = as_channel(self.datastore.get_channel())
+        previous = self.datastore.get_channel()
 
         if explicit is None:
             explicit = previous.explicit
@@ -130,8 +103,7 @@ class AdminPodcast:
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
-        episodes = [ as_episode(ep) for ep in self.datastore.get_episodes() ]
-        return [ ep.as_dict() for ep in episodes ]
+        return [ dict(ep) for ep in self.datastore.get_episodes() ]
 
     def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""

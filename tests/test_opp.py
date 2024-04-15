@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from opp.podcast import Episode, Enclosure, AudioFormat
+from opp.podcast import Channel, Episode, Enclosure, AudioFormat
 
 import opp.administrator as administrator
 import opp.visitor as visitor
@@ -17,11 +17,11 @@ class VisitorTestStore(visitor.PodcastDatastore):
 
 
     def get_channel(self):
-        return self.channel.as_dict()
+        return self.channel
             
 
     def get_episodes(self):
-        return [ ep.as_dict() for ep in self.episodes ]
+        return self.episodes
 
 
 class TestVisitor:
@@ -72,9 +72,12 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
         self._episodes.sort(key=lambda ep: ep.pubDate)
 
+    def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
+        self._channel = Channel(title=title, link=link, description=description, image=image, author=author, email=email, language=language, category=category, explicit=explicit, keywords=keywords)
+
     def get_channel(self):
         """Produce the podcast.Channel."""
-        return self._channel.as_dict()
+        return self._channel
 
     def update_channel(self, title=None, link=None, description=None, image=None, author=None, email=None, language=None, category=None, explicit=None, keywords=None):
         """Update the externally stored podcast channel information."""
@@ -119,7 +122,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
-        return [ ep.as_dict() for ep in self._episodes ]
+        return self._episodes
 
     def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
@@ -167,6 +170,28 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
 
 class TestAdministrator:
+
+    def test_initialize_channel(self):
+        datastore = AdministratorTestStore()
+        datastore._channel = None
+
+        expect = factories.ChannelFactory()
+        admin_interface = administrator.AdminPodcast(datastore)
+
+        admin_interface.initialize_channel(expect.title, expect.link, expect.description, expect.image, expect.author, expect.email, expect.language, expect.category, expect.explicit, expect.keywords)
+
+        result = admin_interface.get_channel()
+
+        assert result["title"] == expect.title
+        assert result["link"] == expect.link
+        assert result["description"] == expect.description
+        assert result["image"] == expect.image
+        assert result["author"] == expect.author
+        assert result["email"] == expect.email
+        assert result["language"] == expect.language
+        assert result["category"] == expect.category
+        assert result["explicit"] == expect.explicit
+        assert result["keywords"] == expect.keywords
 
     def test_get_channel(self):
         datastore = AdministratorTestStore()
@@ -240,7 +265,7 @@ class TestAdministrator:
             if episode.guid == new.guid:
                 result = episode
 
-        assert result.as_dict() == new.as_dict()
+        assert dict(result) == dict(new)
 
     def test_update_episode(self):
         datastore = AdministratorTestStore(3)

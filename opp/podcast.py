@@ -25,19 +25,19 @@ class Channel:
         self.explicit = explicit
         self.keywords = keywords
 
-    def as_dict(self):
-        return {
-            "title": self.title,
-            "link": self.link,
-            "description": self.description,
-            "image": self.image,
-            "author": self.author,
-            "email": self.email,
-            "language": self.language,
-            "category": self.category,
-            "explicit": self.explicit,
-            "keywords": self.keywords
-        }
+    def __iter__(self):
+        return iter([
+            ("title", self.title),
+            ("link", self.link),
+            ("description", self.description),
+            ("image", self.image),
+            ("author", self.author),
+            ("email", self.email),
+            ("language", self.language),
+            ("category", self.category),
+            ("explicit", self.explicit),
+            ("keywords", self.keywords)
+            ])
 
     def __repr__(self):
         return f"Channel('{self.title}', '{self.link}', ...)" 
@@ -82,21 +82,21 @@ class Episode:
         self.pubDate = pubDate
         self.image = image
 
-    def as_dict(self):
+    def __iter__(self):
         return \
-            { 
-                "title": self.title,
-                "link": self.link,
-                "description": self.description,
-                "guid": self.guid,
-                "duration": self.duration,
-                "pubDate": self.pubDate.isoformat(),
-                "image": self.image,
+            iter([
+                ("title", self.title),
+                ("link", self.link),
+                ("description", self.description),
+                ("guid", self.guid),
+                ("duration", self.duration),
+                ("pubDate", self.pubDate.isoformat()),
+                ("image", self.image),
 
-                "file_name": self.enclosure.file_name,
-                "audio_format": self.enclosure.audio_format.value,
-                "length": self.enclosure.length
-            }
+                ("file_name", self.enclosure.file_name),
+                ("audio_format", self.enclosure.audio_format.value),
+                ("length", self.enclosure.length)
+                ])
 
     def __repr__(self):
         return f"Episode('{self.title}', '{self.link}', '{self.guid}' ...)"
