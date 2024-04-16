@@ -36,6 +36,7 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._data_path, "w") as file:
             json.dump(channel_data, file)
 
+
     def get_channel(self):
         """Produce the podcast.Channel."""
 
@@ -47,9 +48,30 @@ class AdminDS(adm.PodcastDatastore):
 
         return channel
 
+
     def update_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Update the externally stored podcast channel information."""
-        pass
+
+        with open(self._data_path, "r") as file:
+            podcast_data = json.load(file)
+
+        chdata = {  "title": title,
+                    "link": link,
+                    "description": description,
+                    "image": image,
+                    "author": author,
+                    "email": email,
+                    "language": language,
+                    "category": category,
+                    "explicit": explicit,
+                    "keywords": keywords
+                    }
+
+        podcast_data["channel"] = chdata
+
+        with open(self._data_path, "w") as file:
+            json.dump(podcast_data, file)
+
 
 
     def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
