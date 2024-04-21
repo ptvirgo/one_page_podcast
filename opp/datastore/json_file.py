@@ -92,12 +92,12 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._data_path, "r") as file:
             podcast_data = json.load(file)
 
-        if "episodes" in podcast_data:
-            episodes = sorted(podcast_data["episodes"] + ep_data, key=lambda ep: ep["pubDate"], reverse=True)
+        if type(podcast_data.get("episodes")) is list:
+            podcast_data["episodes"].append(ep_data)
         else:
-            episodes = [ep_data]
+            podcast_data["episodes"] = [ep_data]
 
-        podcast_data["episodes"] = episodes
+        podcast_data["episodes"].sort(key=lambda ep: ep["pubDate"], reverse=True)
 
         with open(self._data_path, "w") as file:
             json.dump(podcast_data, file)

@@ -68,6 +68,18 @@ class TestAdminDS:
         result = datastore.get_episodes()[0]
         self.check_episode(result, first)
 
+        second = factories.EpisodeFactory()
+        third = factories.EpisodeFactory()
+
+        datastore.create_episode(second.title, second.link, second.description, str(second.guid), second.duration, second.pubDate.isoformat(), second.enclosure.file_name, second.enclosure.audio_format.value, second.enclosure.length, second.image)
+        datastore.create_episode(third.title, third.link, third.description, str(third.guid), third.duration, third.pubDate.isoformat(), third.enclosure.file_name, third.enclosure.audio_format.value, third.enclosure.length, third.image)
+
+        triple = sorted([first, second, third], key=lambda x: x.pubDate, reverse=True)
+        result = datastore.get_episodes()
+
+        for i in range(3):
+            self.check_episode(result[i], triple[i])
+
         ## WIP:  You'll probably need to discard support for the "image" temporarily, and re-evaluate whether the audio file is passed as a path or a datastream during the create & update phase.
 
 
