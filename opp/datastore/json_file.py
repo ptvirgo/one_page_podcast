@@ -2,7 +2,6 @@
 
 from datetime import date
 import json
-from pathlib import Path
 import uuid
 
 import opp.podcast as podcast
@@ -20,24 +19,23 @@ class AdminDS(adm.PodcastDatastore):
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
 
-        channel_data = \
-            { "channel":
-                    { "title": title,
-                    "link": link,
-                    "description": description,
-                    "image": image,
-                    "author": author,
-                    "email": email,
-                    "language": language,
-                    "category": category,
-                    "explicit": explicit,
-                    "keywords": keywords
-                    }
-            }
+        channel_data = {
+            "channel": {
+                "title": title,
+                "link": link,
+                "description": description,
+                "image": image,
+                "author": author,
+                "email": email,
+                "language": language,
+                "category": category,
+                "explicit": explicit,
+                "keywords": keywords
+                }
+        }
 
         with open(self._data_path, "w") as file:
             json.dump(channel_data, file)
-
 
     def get_channel(self):
         """Produce the podcast.Channel."""
@@ -50,43 +48,43 @@ class AdminDS(adm.PodcastDatastore):
 
         return channel
 
-
     def update_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Update the externally stored podcast channel information."""
 
         with open(self._data_path, "r") as file:
             podcast_data = json.load(file)
 
-        chdata = {  "title": title,
-                    "link": link,
-                    "description": description,
-                    "image": image,
-                    "author": author,
-                    "email": email,
-                    "language": language,
-                    "category": category,
-                    "explicit": explicit,
-                    "keywords": keywords
-                    }
+        chdata = {
+            "title": title,
+            "link": link,
+            "description": description,
+            "image": image,
+            "author": author,
+            "email": email,
+            "language": language,
+            "category": category,
+            "explicit": explicit,
+            "keywords": keywords
+        }
 
         podcast_data["channel"] = chdata
 
         with open(self._data_path, "w") as file:
             json.dump(podcast_data, file)
 
-
     def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
         """Save a new episode."""
-        ep_data = { "title": title,
-                    "link": link,
-                    "description": description,
-                    "guid": guid,
-                    "duration": duration,
-                    "pubDate": pubDate,
-                    "file_name": file_name,
-                    "audio_format": audio_format,
-                    "length": length,
-                    "image": image
+        ep_data = {
+            "title": title,
+            "link": link,
+            "description": description,
+            "guid": guid,
+            "duration": duration,
+            "pubDate": pubDate,
+            "file_name": file_name,
+            "audio_format": audio_format,
+            "length": length,
+            "image": image
                     }
 
         with open(self._data_path, "r") as file:
@@ -102,7 +100,6 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._data_path, "w") as file:
             json.dump(podcast_data, file)
 
-
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
 
@@ -114,8 +111,7 @@ class AdminDS(adm.PodcastDatastore):
         else:
             episode_data = []
 
-        return [ self.data_to_episode(ep) for ep in episode_data ]
-
+        return [self.data_to_episode(ep) for ep in episode_data]
 
     @staticmethod
     def data_to_episode(ep_data):
