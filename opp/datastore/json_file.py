@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from datetime import date
 import json
 from pathlib import Path
+import uuid
 
 import opp.podcast as podcast
 import opp.visitor as visitor
@@ -73,14 +75,55 @@ class AdminDS(adm.PodcastDatastore):
             json.dump(podcast_data, file)
 
 
-
     def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
         """Save a new episode."""
-        pass
+        ep_data = { "title": title,
+                    "link": link,
+                    "description": description,
+                    "guid": guid,
+                    "duration": duration,
+                    "pubDate": pubDate,
+                    "file_name": file_name,
+                    "audio_format": audio_format,
+                    "length": length,
+                    "image": image
+                    }
+
+        with open(self._data_path, "r") as file:
+            podcast_data = json.load(file)
+
+        if "episodes" in podcast_data:
+            episodes = sorted(podcast_data["episodes"] + ep_data, key=lambda ep: ep["pubDate"], reverse=True)
+        else:
+            episodes = [ep_data]
+
+        podcast_data["episodes"] = episodes
+
+        with open(self._data_path, "w") as file:
+            json.dump(podcast_data, file)
+
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
-        pass
+
+        with open(self._data_path, "r") as file:
+            podcast_data = json.load(file)
+
+        if "episodes" in podcast_data:
+            episode_data = podcast_data["episodes"]
+        else:
+            episode_data = []
+
+        return [ self.data_to_episode(ep) for ep in episode_data ]
+
+
+    @staticmethod
+    def data_to_episode(ep_data):
+        """Convert the JSON data to an Episode object."""
+        enclosure = podcast.Enclosure(ep_data["file_name"], podcast.AudioFormat(ep_data["audio_format"]), ep_data["length"])
+
+        episode = podcast.Episode(ep_data["title"], ep_data["link"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], enclosure, date.fromisoformat(ep_data["pubDate"]))
+        return episode
 
     def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
         """Update an existing episode."""
@@ -89,4 +132,3 @@ class AdminDS(adm.PodcastDatastore):
     def delete_episode(self, guid):
         """Delete an episode.""show " = """
         pass
-
