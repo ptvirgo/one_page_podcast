@@ -62,24 +62,18 @@ class TestAdminDS:
         channel = factories.ChannelFactory()
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
-        first = factories.EpisodeFactory()
-
-        datastore.create_episode(first.title, first.link, first.description, str(first.guid), first.duration, first.pubDate.isoformat(), first.enclosure.file_name, first.enclosure.audio_format.value, first.enclosure.length, first.image)
-
-        result = datastore.get_episodes()[0]
-        self.check_episode(result, first)
-
-        second = factories.EpisodeFactory()
-        third = factories.EpisodeFactory()
-
-        datastore.create_episode(second.title, second.link, second.description, str(second.guid), second.duration, second.pubDate.isoformat(), second.enclosure.file_name, second.enclosure.audio_format.value, second.enclosure.length, second.image)
-        datastore.create_episode(third.title, third.link, third.description, str(third.guid), third.duration, third.pubDate.isoformat(), third.enclosure.file_name, third.enclosure.audio_format.value, third.enclosure.length, third.image)
-
-        triple = sorted([first, second, third], key=lambda x: x.pubDate, reverse=True)
-        result = datastore.get_episodes()
+        episodes = []
 
         for i in range(3):
-            self.check_episode(result[i], triple[i])
+            ep = factories.EpisodeFactory()
+            episodes.append(ep)
+            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+
+        episodes.sort(key=lambda ep: ep.publication_date, reverse=True)
+        results = datastore.get_episodes()
+
+        for i in range(3):
+            assert results[i] == episodes[i]
 
     def test_update_episode(self, tmp_path):
         """Make sure we can update an episode."""
@@ -89,8 +83,8 @@ class TestAdminDS:
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
         for i in range(3):
-            episode = factories.EpisodeFactory()
-            datastore.create_episode(episode.title, episode.link, episode.description, str(episode.guid), episode.duration, episode.pubDate.isoformat(), episode.enclosure.file_name, episode.enclosure.audio_format.value, episode.enclosure.length, episode.image)
+            ep = factories.EpisodeFactory()
+            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
 
         episodes = datastore.get_episodes()
 
@@ -99,23 +93,19 @@ class TestAdminDS:
 
         new = factories.EpisodeFactory()
 
-        for attribute in ["title", "link", "description", "duration"]:
+        for attribute in ["title", "description", "duration", "publication_date"]:
             value = getattr(new, attribute)
             datastore.update_episode(str(old.guid), **{attribute: value})
             updated = datastore.get_episodes()[1]
 
             assert getattr(updated, attribute) == value
 
-        datastore.update_episode(str(old.guid), file_name=new.enclosure.file_name, length=new.enclosure.length, audio_format=new.enclosure.audio_format.value)
+        datastore.update_episode(str(old.guid), audio_format=new.audio_format.value)
         updated = datastore.get_episodes()[1]
-
-        assert updated.enclosure.file_name == new.enclosure.file_name
-        assert updated.enclosure.length == new.enclosure.length
-        assert updated.enclosure.audio_format == new.enclosure.audio_format
+        assert updated.audio_format == new.audio_format
 
         control_post = datastore.get_episodes()[0]
-
-        self.check_episode(control_post, control_prior)
+        assert control_post == control_prior
 
     def test_delete_episode(self, tmp_path):
         """Make sure we can delete an episode."""
@@ -125,8 +115,8 @@ class TestAdminDS:
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
         for i in range(3):
-            episode = factories.EpisodeFactory()
-            datastore.create_episode(episode.title, episode.link, episode.description, str(episode.guid), episode.duration, episode.pubDate.isoformat(), episode.enclosure.file_name, episode.enclosure.audio_format.value, episode.enclosure.length, episode.image)
+            ep = factories.EpisodeFactory()
+            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
 
         prior_episodes = datastore.get_episodes()
         datastore.delete_episode(str(prior_episodes[1].guid))
@@ -135,22 +125,5 @@ class TestAdminDS:
 
         assert len(post_episodes) == 2
 
-        self.check_episode(post_episodes[0], prior_episodes[0])
-        self.check_episode(post_episodes[-1], prior_episodes[-1])
-
-
-
-    @staticmethod
-    def check_episode(result, expect):
-        """Verify that two episodes are effectively identical."""
-
-        assert result.title == expect.title
-        assert result.link == expect.link
-        assert result.description == expect.description
-        assert result.guid == expect.guid
-        assert result.duration == expect.duration
-        assert result.pubDate == expect.pubDate
-        assert result.enclosure.file_name == expect.enclosure.file_name
-        assert result.enclosure.audio_format == expect.enclosure.audio_format
-        assert result.enclosure.length == expect.enclosure.length
-        assert result.image == expect.image
+        assert post_episodes[0] == prior_episodes[0]
+        assert post_episodes[-1] == prior_episodes[-1]

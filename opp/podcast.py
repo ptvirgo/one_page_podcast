@@ -9,6 +9,7 @@ This layer should be stable and have no lower level dependencies.
 Objects in this layer should expect to remain unchanged unless something fundamental (such as the definition of a Podcast, universally accepted audio formats, or similar) affects the basic purpose of the app.
 """
 
+
 class Channel:
 
     def __init__(self, title, link, description, image, author, email=None, language="en", category="Comedy", explicit=False, keywords=None):
@@ -37,10 +38,10 @@ class Channel:
             ("category", self.category),
             ("explicit", self.explicit),
             ("keywords", self.keywords)
-            ])
+        ])
 
     def __repr__(self):
-        return f"Channel('{self.title}', '{self.link}', ...)" 
+        return f"Channel('{self.title}', '{self.link}', ...)"
 
 
 class AudioFormat(enum.Enum):
@@ -59,44 +60,30 @@ class AudioFormat(enum.Enum):
         return kvp[self]
 
 
-class Enclosure:
-    def __init__(self, file_name, audio_format, length):
-    
-        self.file_name = file_name
-        self.audio_format = audio_format
-        self.length = length # Integer, size in bytes
-
-    def __repr__(self):
-        return f"Enclosure('{self.file_name}')"
-
-
 class Episode:
-    def __init__(self, title, link, description, guid, duration, enclosure, pubDate, image=None):
-        
+    def __init__(self, title, description, guid, duration, publication_date, audio_format):
+        """Describe an episode."""
+
         self.title = title
-        self.link = link
         self.description = description
         self.guid = guid
-        self.duration = duration # Integer, measure seconds
-        self.enclosure = enclosure
-        self.pubDate = pubDate
-        self.image = image
+        self.duration = duration  # Integer, measure seconds
+        self.publication_date = publication_date
+        self.audio_format = audio_format
 
     def __iter__(self):
         return \
             iter([
                 ("title", self.title),
-                ("link", self.link),
                 ("description", self.description),
                 ("guid", self.guid),
                 ("duration", self.duration),
-                ("pubDate", self.pubDate.isoformat()),
-                ("image", self.image),
+                ("publication_date", self.publication_date.isoformat()),
+                ("audio_format", self.audio_format.value),
+            ])
 
-                ("file_name", self.enclosure.file_name),
-                ("audio_format", self.enclosure.audio_format.value),
-                ("length", self.enclosure.length)
-                ])
+    def __eq__(self, other):
+        return self.title == other.title and self.description == other.description and self.guid == other.guid and self.duration == other.duration and self.publication_date == other.publication_date and self.audio_format == other.audio_format
 
     def __repr__(self):
-        return f"Episode('{self.title}', '{self.link}', '{self.guid}' ...)"
+        return f"Episode('{self.title}', '{self.guid}' ...)"

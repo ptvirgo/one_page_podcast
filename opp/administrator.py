@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from datetime import date
-
-from .podcast import *
+from .podcast import Channel, Episode
 
 """
 Administrator use case code & interface definition.
 
 Changes to the operation of the application, that the owner, would be reflected here.  However, this layer should not affect the core entities nor should it be impacted by the UI or any databases, etc.
 """
+
 
 class PodcastDatastore(ABC):
 
@@ -30,9 +29,8 @@ class PodcastDatastore(ABC):
         """Update the externally stored podcast channel information."""
         pass
 
-
     @abstractmethod
-    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
+    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
         pass
 
@@ -42,7 +40,7 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
+    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
         """Update an existing episode."""
         pass
 
@@ -58,7 +56,6 @@ class AdminPodcast:
 
     def __init__(self, datastore):
         self.datastore = datastore
-
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         channel = Channel(title, link, description, image, author, email, language, category, explicit, keywords)
@@ -76,7 +73,7 @@ class AdminPodcast:
             explicit = previous.explicit
 
         if keywords is None:
-            kepwords = previous.keywords
+            keywords = previous.keywords
 
         new = Channel(
             title or previous.title,
@@ -93,25 +90,21 @@ class AdminPodcast:
 
         self.datastore.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
 
-    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
+    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
 
-        enclosure = Enclosure(file_name, AudioFormat(audio_format), length)
-        new = Episode(title, link, description, guid, duration, enclosure, pubDate, image=image)
+        new = Episode(title, description, guid, duration, publication_date, audio_format)
 
-        self.datastore.create_episode(new.title, new.link, new.description, new.guid, new.duration, new.pubDate, new.enclosure.file_name, new.enclosure.audio_format.value, new.enclosure.length, image=new.image)
+        self.datastore.create_episode(new.title, new.description, str(new.guid), new.duration, new.publication_date, new.audio_format.value)
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
-        return [ dict(ep) for ep in self.datastore.get_episodes() ]
+        return [dict(ep) for ep in self.datastore.get_episodes()]
 
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
+    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
         """Update an existing episode."""
 
-        if pubDate is not None:
-            pubDate = date.fromisoformat(pubDate)
-
-        self.datastore.update_episode(guid, title=title, link=link, description=description, duration=duration, pubDate=pubDate, file_name=file_name, audio_format=audio_format, length=length, image=image)
+        self.datastore.update_episode(guid, title=title, description=description, duration=duration, publication_date=publication_date, audio_format=audio_format)
 
     def delete_episode(self, guid):
         """Delete an episode."""

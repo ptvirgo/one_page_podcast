@@ -20,7 +20,8 @@ class AdminDS(adm.PodcastDatastore):
         """Initialize a new channel."""
 
         channel_data = {
-            "channel": {
+            "channel":
+            {
                 "title": title,
                 "link": link,
                 "description": description,
@@ -31,7 +32,7 @@ class AdminDS(adm.PodcastDatastore):
                 "category": category,
                 "explicit": explicit,
                 "keywords": keywords
-                }
+            }
         }
 
         with open(self._data_path, "w") as file:
@@ -72,20 +73,16 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._data_path, "w") as file:
             json.dump(podcast_data, file)
 
-    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
+    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
         ep_data = {
             "title": title,
-            "link": link,
             "description": description,
             "guid": guid,
             "duration": duration,
-            "pubDate": pubDate,
-            "file_name": file_name,
+            "publication_date": publication_date.isoformat(),
             "audio_format": audio_format,
-            "length": length,
-            "image": image
-                    }
+        }
 
         with open(self._data_path, "r") as file:
             podcast_data = json.load(file)
@@ -95,7 +92,7 @@ class AdminDS(adm.PodcastDatastore):
         else:
             podcast_data["episodes"] = [ep_data]
 
-        podcast_data["episodes"].sort(key=lambda ep: ep["pubDate"], reverse=True)
+        podcast_data["episodes"].sort(key=lambda ep: ep["publication_date"], reverse=True)
 
         with open(self._data_path, "w") as file:
             json.dump(podcast_data, file)
@@ -116,9 +113,8 @@ class AdminDS(adm.PodcastDatastore):
     @staticmethod
     def data_to_episode(ep_data):
         """Convert the JSON data to an Episode object."""
-        enclosure = podcast.Enclosure(ep_data["file_name"], podcast.AudioFormat(ep_data["audio_format"]), ep_data["length"])
 
-        episode = podcast.Episode(ep_data["title"], ep_data["link"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], enclosure, date.fromisoformat(ep_data["pubDate"]))
+        episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]))
         return episode
 
     def update_episode(self, guid, **kwargs):
@@ -130,13 +126,10 @@ class AdminDS(adm.PodcastDatastore):
 
         Optional:
             - title
-            - link
             - description
             - duration
-            - pubDate
-            - file_name
+            - publication_date
             - audio_format
-            - length
 
         Return: None
         """
@@ -149,10 +142,13 @@ class AdminDS(adm.PodcastDatastore):
 
         select = guids.index(guid)
 
-        for attribute in ["title", "link", "description", "duration", "pubDate", "file_name", "audio_format", "length"]:
+        for attribute in ["title", "description", "duration", "audio_format"]:
 
             if attribute in kwargs:
                 episodes[select][attribute] = kwargs[attribute]
+
+        if kwargs.get("publication_date") is not None:
+            episodes[select]["publication_date"] = kwargs["publication_date"].isoformat()
 
         podcast_data["episodes"] = episodes
 
