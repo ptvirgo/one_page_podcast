@@ -121,10 +121,57 @@ class AdminDS(adm.PodcastDatastore):
         episode = podcast.Episode(ep_data["title"], ep_data["link"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], enclosure, date.fromisoformat(ep_data["pubDate"]))
         return episode
 
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
-        """Update an existing episode."""
-        pass
+    def update_episode(self, guid, **kwargs):
+        """
+        Update an existing episode.
+
+        Required:
+            - guid - str, episode global identifier
+
+        Optional:
+            - title
+            - link
+            - description
+            - duration
+            - pubDate
+            - file_name
+            - audio_format
+            - length
+
+        Return: None
+        """
+
+        with open(self._data_path, "r") as file:
+            podcast_data = json.load(file)
+
+        episodes = podcast_data.get("episodes", [])
+        guids = [ep["guid"] for ep in episodes]
+
+        select = guids.index(guid)
+
+        for attribute in ["title", "link", "description", "duration", "pubDate", "file_name", "audio_format", "length"]:
+
+            if attribute in kwargs:
+                episodes[select][attribute] = kwargs[attribute]
+
+        podcast_data["episodes"] = episodes
+
+        with open(self._data_path, "w") as file:
+            json.dump(podcast_data, file)
 
     def delete_episode(self, guid):
-        """Delete an episode.""show " = """
-        pass
+        """Delete an episode."""
+
+        with open(self._data_path, "r") as file:
+            podcast_data = json.load(file)
+
+        episodes = podcast_data.get("episodes", [])
+        guids = [ep["guid"] for ep in episodes]
+
+        select = guids.index(guid)
+        episodes.pop(select)
+
+        podcast_data["episodes"] = episodes
+
+        with open(self._data_path, "w") as file:
+            json.dump(podcast_data, file)

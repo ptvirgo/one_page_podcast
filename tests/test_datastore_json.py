@@ -57,7 +57,7 @@ class TestAdminDS:
     def test_create_episode(self, tmp_path):
         """Make sure we can create and retrieve episodes."""
 
-        datastore = jsf.AdminDS(tmp_path / "test_create_epsiode.js")
+        datastore = jsf.AdminDS(tmp_path / "test_create_epsiode.json")
 
         channel = factories.ChannelFactory()
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
@@ -81,7 +81,64 @@ class TestAdminDS:
         for i in range(3):
             self.check_episode(result[i], triple[i])
 
-        # WIP:  You'll probably need to discard support for the "image" temporarily, and re-evaluate whether the audio file is passed as a path or a datastream during the create & update phase.
+    def test_update_episode(self, tmp_path):
+        """Make sure we can update an episode."""
+
+        datastore = jsf.AdminDS(tmp_path / "test_update_episode.json")
+        channel = factories.ChannelFactory()
+        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+
+        for i in range(3):
+            episode = factories.EpisodeFactory()
+            datastore.create_episode(episode.title, episode.link, episode.description, str(episode.guid), episode.duration, episode.pubDate.isoformat(), episode.enclosure.file_name, episode.enclosure.audio_format.value, episode.enclosure.length, episode.image)
+
+        episodes = datastore.get_episodes()
+
+        control_prior = episodes[0]
+        old = episodes[1]
+
+        new = factories.EpisodeFactory()
+
+        for attribute in ["title", "link", "description", "duration"]:
+            value = getattr(new, attribute)
+            datastore.update_episode(str(old.guid), **{attribute: value})
+            updated = datastore.get_episodes()[1]
+
+            assert getattr(updated, attribute) == value
+
+        datastore.update_episode(str(old.guid), file_name=new.enclosure.file_name, length=new.enclosure.length, audio_format=new.enclosure.audio_format.value)
+        updated = datastore.get_episodes()[1]
+
+        assert updated.enclosure.file_name == new.enclosure.file_name
+        assert updated.enclosure.length == new.enclosure.length
+        assert updated.enclosure.audio_format == new.enclosure.audio_format
+
+        control_post = datastore.get_episodes()[0]
+
+        self.check_episode(control_post, control_prior)
+
+    def test_delete_episode(self, tmp_path):
+        """Make sure we can delete an episode."""
+
+        datastore = jsf.AdminDS(tmp_path / "test_delete_episode.json")
+        channel = factories.ChannelFactory()
+        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+
+        for i in range(3):
+            episode = factories.EpisodeFactory()
+            datastore.create_episode(episode.title, episode.link, episode.description, str(episode.guid), episode.duration, episode.pubDate.isoformat(), episode.enclosure.file_name, episode.enclosure.audio_format.value, episode.enclosure.length, episode.image)
+
+        prior_episodes = datastore.get_episodes()
+        datastore.delete_episode(str(prior_episodes[1].guid))
+
+        post_episodes = datastore.get_episodes()
+
+        assert len(post_episodes) == 2
+
+        self.check_episode(post_episodes[0], prior_episodes[0])
+        self.check_episode(post_episodes[-1], prior_episodes[-1])
+
+
 
     @staticmethod
     def check_episode(result, expect):
