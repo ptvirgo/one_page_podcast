@@ -76,7 +76,7 @@ class Episode:
             iter([
                 ("title", self.title),
                 ("description", self.description),
-                ("guid", self.guid),
+                ("guid", str(self.guid)),
                 ("duration", self.duration),
                 ("publication_date", self.publication_date.isoformat()),
                 ("audio_format", self.audio_format.value),

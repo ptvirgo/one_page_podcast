@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from .podcast import Channel, Episode
+from .podcast import Channel, Episode, AudioFormat
 
 """
 Administrator use case code & interface definition.
@@ -93,7 +93,7 @@ class AdminPodcast:
     def create_episode(self, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
 
-        new = Episode(title, description, guid, duration, publication_date, audio_format)
+        new = Episode(title, description, guid, duration, publication_date, AudioFormat(audio_format))
 
         self.datastore.create_episode(new.title, new.description, str(new.guid), new.duration, new.publication_date, new.audio_format.value)
 

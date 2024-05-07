@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from opp.podcast import Channel, Episode, Enclosure, AudioFormat
+from uuid import UUID
+
+from opp.podcast import Channel, Episode, AudioFormat
 
 import opp.administrator as administrator
 import opp.visitor as visitor
@@ -13,12 +15,10 @@ class VisitorTestStore(visitor.PodcastDatastore):
 
     def __init__(self):
         self.channel = factories.ChannelFactory()
-        self.episodes = [ factories.EpisodeFactory(), factories.EpisodeFactory(), factories.EpisodeFactory() ]
-
+        self.episodes = [factories.EpisodeFactory(), factories.EpisodeFactory(), factories.EpisodeFactory()]
 
     def get_channel(self):
         return self.channel
-            
 
     def get_episodes(self):
         return self.episodes
@@ -47,16 +47,11 @@ class TestVisitor:
         episode_result = result["episodes"][0]
 
         assert episode_result["title"] == episode.title
-        assert episode_result["link"] == episode.link
         assert episode_result["description"] == episode.description
-        assert episode_result["guid"] == episode.guid
+        assert episode_result["guid"] == str(episode.guid)
         assert episode_result["duration"] == episode.duration
-        assert episode_result["pubDate"] == episode.pubDate.isoformat()
-        assert episode_result["image"] == episode.image
-
-        assert episode_result["file_name"] == episode.enclosure.file_name
-        assert episode_result["audio_format"] == episode.enclosure.audio_format.value
-        assert episode_result["length"] == episode.enclosure.length
+        assert episode_result["publication_date"] == episode.publication_date.isoformat()
+        assert episode_result["audio_format"] == episode.audio_format.value
 
         assert len(result["episodes"]) == len(loader.episodes)
 
@@ -70,7 +65,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         for i in range(make_episodes):
             self._episodes.append(factories.EpisodeFactory())
 
-        self._episodes.sort(key=lambda ep: ep.pubDate)
+        self._episodes.sort(key=lambda ep: ep.publication_date)
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         self._channel = Channel(title=title, link=link, description=description, image=image, author=author, email=email, language=language, category=category, explicit=explicit, keywords=keywords)
@@ -90,57 +85,48 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
         if type(description) is str:
             self._channel.description = description
-        
+
         if type(image) is str:
             self._channel.image = image
-        
+
         if type(author) is str:
             self._channel.author = author
-        
+
         if type(email) is str:
             self._channel.email = email
-        
+
         if type(language) is str:
             self._channel.language = language
-        
+
         if type(category) is str:
             self._channel.category = category
-        
+
         if type(explicit) is bool:
             self._channel.explicit = explicit
-        
+
         if type(keywords) is list:
             self._channel.keywords = keywords
 
-    def create_episode(self, title, link, description, guid, duration, pubDate, file_name, audio_format, length, image=None):
+    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
-        enclosure = Enclosure(file_name, AudioFormat(audio_format), length)
-        episode = Episode(title, link, description, guid, duration, enclosure, pubDate, image)
+        episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format))
 
         self._episodes.append(episode)
-        self._episodes.sort(key=lambda x: x.pubDate)
+        self._episodes.sort(key=lambda x: x.publication_date)
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
         return self._episodes
 
-    def update_episode(self, guid, title=None, link=None, description=None, duration=None, pubDate=None, file_name=None, audio_format=None, length=None, image=None):
+    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
         """Update an existing episode."""
 
-        episode = None
-
-        for ep in self._episodes:
-            if ep.guid == guid:
-                episode = ep
-
-        if episode is None:
-            raise ValueError("Invalid GUID")
+        guids = [ep.guid for ep in self._episodes]
+        select = guids.index(guid)
+        episode = self._episodes[select]
 
         if title is not None:
             episode.title = title
-
-        if link is not None:
-            episode.link = link
 
         if description is not None:
             episode.description = description
@@ -148,25 +134,16 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         if duration is not None:
             episode.duration = duration
 
-        if pubDate is not None:
-            episode.pubDate = pubDate
-
-        if image is not None:
-            episode.image = image
-
-        if file_name is not None:
-            episode.enclosure.file_name = file_name
+        if publication_date is not None:
+            episode.publication_date = publication_date
 
         if audio_format is not None:
-            episode.enclosure.audio_format = AudioFormat(audio_format)
-
-        if length is not None:
-            episode.enclosure.length = length
+            episode.audio_format = AudioFormat(audio_format)
 
     def delete_episode(self, guid):
         """Delete an episode."""
 
-        self._episodes = [ ep for ep in self._episodes if ep.guid != guid ]
+        self._episodes = [ep for ep in self._episodes if ep.guid != guid]
 
 
 class TestAdministrator:
@@ -221,14 +198,11 @@ class TestAdministrator:
 
         def check_episode(check, expect):
             assert check["title"] == expect.title
-            assert check["link"] == expect.link
             assert check["description"] == expect.description
-            assert check["guid"] == expect.guid
+            assert check["guid"] == str(expect.guid)
             assert check["duration"] == expect.duration
-            assert check["pubDate"] == expect.pubDate.isoformat()
-            assert check["image"] == expect.image
-            assert check["file_name"] == expect.enclosure.file_name
-            assert check["audio_format"] == expect.enclosure.audio_format.value
+            assert check["publication_date"] == expect.publication_date.isoformat()
+            assert check["audio_format"] == expect.audio_format.value
 
         for i in range(count):
             check_episode(results[i], expects[i])
@@ -242,7 +216,7 @@ class TestAdministrator:
         result = admin_interface.get_channel()
 
         assert result["title"] == new.title
-        assert result["link"] ==new.link
+        assert result["link"] == new.link
         assert result["description"] == new.description
         assert result["image"] == new.image
         assert result["author"] == new.author
@@ -257,13 +231,11 @@ class TestAdministrator:
         admin_interface = administrator.AdminPodcast(datastore)
         new = factories.EpisodeFactory()
 
-        admin_interface.create_episode(new.title, new.link, new.description, new.guid, new.duration, new.pubDate, new.enclosure.file_name, new.enclosure.audio_format.value, new.enclosure.length, image=new.image)
+        admin_interface.create_episode(new.title, new.description, new.guid, new.duration, new.publication_date, new.audio_format.value)
 
-        result = None
-
-        for episode in datastore._episodes:
-            if episode.guid == new.guid:
-                result = episode
+        guids = [ep.guid for ep in datastore._episodes]
+        select = guids.index(new.guid)
+        result = datastore._episodes[select]
 
         assert dict(result) == dict(new)
 
@@ -277,30 +249,17 @@ class TestAdministrator:
         admin_interface.update_episode(prev.guid, title=new.title)
         assert prev.title == new.title
 
-        admin_interface.update_episode(prev.guid, link=new.link)
-        assert prev.link == new.link
-
         admin_interface.update_episode(prev.guid, description=new.description)
         assert prev.description == new.description
 
         admin_interface.update_episode(prev.guid, duration=new.duration)
         assert prev.duration == new.duration
 
-        admin_interface.update_episode(prev.guid, pubDate=new.pubDate.isoformat())
-        assert prev.pubDate == new.pubDate
+        admin_interface.update_episode(prev.guid, publication_date=new.publication_date)
+        assert prev.publication_date == new.publication_date
 
-        admin_interface.update_episode(prev.guid, image=new.image)
-        assert prev.image == new.image
-
-        admin_interface.update_episode(prev.guid, file_name=new.enclosure.file_name)
-        assert prev.enclosure.file_name == new.enclosure.file_name
-
-        admin_interface.update_episode(prev.guid, audio_format=new.enclosure.audio_format.value)
-        assert prev.enclosure.audio_format == new.enclosure.audio_format
-
-        admin_interface.update_episode(prev.guid, length=new.enclosure.length)
-        assert prev.enclosure.length == new.enclosure.length
-
+        admin_interface.update_episode(prev.guid, audio_format=new.audio_format.value)
+        assert prev.audio_format == new.audio_format
 
     def test_delete_episode(self):
         datastore = AdministratorTestStore(3)
