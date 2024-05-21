@@ -4,19 +4,19 @@
 import argparse
 import opp.administrator as administrator
 import opp.datastore.json_file as jsf
+from uuid import uuid4
 
 from pathlib import Path
 
-def channel_parser():
+def make_channel_parser(parser):
     """Produce an argument parser so that a new channel can be initialized."""
 
-    parser = argparse.ArgumentParser(description="Initialize podcast channel.""")
-
     parser.add_argument("title", type=str, help="Title")
-    parser.add_argument("description", type=str, help="Describe the channel")
+    parser.add_argument("description", type=str, help="Describe the channel.")
     parser.add_argument("link", type=str, help="URL")
     parser.add_argument("author", type=str, help="Podcast author")
     parser.add_argument("email", type=str, help="Author email")
+
     parser.add_argument("--category", type=str, help="What kind of podcast is this?", default="news")
     parser.add_argument("--language", type=str, help="Language code. Default 'en'", default="en")
     parser.add_argument("--explicit", action=argparse.BooleanOptionalAction, help="Explicit? Default False", default=False)
@@ -24,21 +24,39 @@ def channel_parser():
 
     return parser
 
-def initialize_channel(path, title, description, link, author, email, language, category, explicit, keywords):
+
+def initialize_channel(args):
     """Initialize a podcast channel."""
+    path = Path(args.path)
+
     datastore = jsf.AdminDS(path)
     podcast_admin = administrator.AdminPodcast(datastore)
-    podcast_admin.initialize_channel(title, link, description, None, author, email, language, category, explicit, keywords)
+    podcast_admin.initialize_channel(args.title, args.link, args.description, None, args.author, args.email, args.language, args.category, args.explicit, args.keywords)
+
+
+def create_episode_parser(parser):
+    """Produce a parser that can create a new episode."""
+
+    parser.add_argument("file", type=str, help="Episode file: mp3, ogg vorbis, or opus.")
+    parser.add_argument("description", type=str, help="Describe the episode.")
+    parser.add_argument("--title", type=str, help="Title")
+    parser.add_argument("--publication-date", type=str, help="Date in YYYY-MM-DD format.")
+
+    return parser
 
 
 def main():
-    path = Path("/home/ptvirgo/tmp/opp_test.json")
+    path = Path("/home/ptvirgo/tmp")
 
-    parser = channel_parser()
+    parser = argparse.ArgumentParser(description="Manage your One Page Podcast")
+    parser.add_argument("path", type=str, help="Path for datastore.")
+
+    subparsers = parser.add_subparsers(title="Commands", required=True)
+
+    init_channel = make_channel_parser(subparsers.add_parser("initialize"))
+    create_episode = create_episode_parser(subparsers.add_parser("create-episode"))
+
     args = parser.parse_args()
-
-    initialize_channel(path, args.title, args.description, args.link, args.author, args.email, args.language, args.category, args.explicit, args.keyword)
-
 
 if __name__ == "__main__":
     main()
