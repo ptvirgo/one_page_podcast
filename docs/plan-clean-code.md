@@ -1,5 +1,12 @@
 # Clean Architecture Remix
 
+## TODO:
+
+- CLI: CRUD episodes
+- Use a configuration file / interface
+- Episode files as File like objects
+- Admin "create episode" as a user story
+    - admin interface has an "extract details" function 
 
 ## Core Entities
 podcast.py

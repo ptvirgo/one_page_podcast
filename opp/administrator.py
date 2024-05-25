@@ -3,6 +3,8 @@
 from abc import ABC, abstractmethod
 from .podcast import Channel, Episode, AudioFormat
 
+import mutagen
+
 """
 Administrator use case code & interface definition.
 
@@ -109,3 +111,41 @@ class AdminPodcast:
     def delete_episode(self, guid):
         """Delete an episode."""
         self.datastore.delete_episode(guid)
+
+    def extract_details(self, filehandle):
+        """
+        Attempt to extract the following from an audio file:
+        - duration
+        - length
+        - audio format
+        - description
+        """
+
+        audio_file = mutagen.File(filehandle)
+        audio_format = AudioFormat(audio_file.mime[0])
+
+        duration = round(audio_file.info.length)
+
+        filehandle.seek(0, 2)
+        length = filehandle.tell()
+        filehandle.seek(0)
+
+        if audio_format == AudioFormat.MP3:
+            title = audio_file.tags.get("TIT2")
+            description = audio_file.tags.get("TXXX:description")
+        else:
+            title = audio_file.tags.get("title")
+            description = audio_file.tags.get("description")
+
+        if title is list:
+            title = title[0]
+
+        if description is list:
+            description = description[0]
+
+        return {"audio_format": audio_format.value,
+                "duration": duration,
+                "length": length,
+                "title": str(title),
+                "description": str(description)
+                }

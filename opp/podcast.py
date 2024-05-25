@@ -45,19 +45,9 @@ class Channel:
 
 
 class AudioFormat(enum.Enum):
-    MP3 = "mp3"
-    OggOpus = "opus"
-    OggVorbis = "ogg"
-
-    @property
-    def mimetype(self):
-        """Produce the mime-type for this audio format"""
-        kvp = {
-            AudioFormat.MP3: "audio/mpeg",
-            AudioFormat.OggOpus: "audio/ogg",  # not a typo
-            AudioFormat.OggVorbis: "audio/ogg"}
-
-        return kvp[self]
+    MP3 = "audio/mp3"
+    OggOpus = "audio/ogg"  # Not a typo
+    OggVorbis = "audio/vorbis"
 
 
 class Episode:

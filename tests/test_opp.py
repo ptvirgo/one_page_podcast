@@ -9,6 +9,10 @@ import opp.administrator as administrator
 import opp.visitor as visitor
 
 import tests.factories as factories
+from pathlib import Path
+
+
+data_dir = Path(__file__).parent / "data"
 
 
 class VisitorTestStore(visitor.PodcastDatastore):
@@ -270,3 +274,34 @@ class TestAdministrator:
 
         for episode in datastore._episodes:
             assert episode.guid != guid
+
+    def test_extract_details(self):
+        datastore = AdministratorTestStore()
+        admin_interface = administrator.AdminPodcast(datastore)
+
+        with open(data_dir / "speech.ogg", "rb") as file:
+            result = admin_interface.extract_details(file)
+
+        assert result["duration"] == 11
+        assert result["length"] == 95837
+        assert result["audio_format"] == AudioFormat.OggVorbis.value
+        assert result["title"] == "Speech Test at q3"
+        assert result["description"] == "I can haz Vorbis?"
+
+        with open(data_dir / "speech_16.opus", "rb") as file:
+            result = admin_interface.extract_details(file)
+
+        assert result["duration"] == 11
+        assert result["length"] == 22521
+        assert result["audio_format"] == AudioFormat.OggOpus.value
+        assert result["title"] == "Speech Test at 16k"
+        assert result["description"] == "I can haz Opus?"
+
+        with open(data_dir / "speech_32.mp3", "rb") as file:
+            result = admin_interface.extract_details(file)
+
+        assert result["duration"] == 11
+        assert result["length"] == 44858
+        assert result["audio_format"] == AudioFormat.MP3.value
+        assert result["title"] == "Speech Test at 32k"
+        assert result["description"] == "I can haz MP3?"
