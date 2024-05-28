@@ -144,7 +144,7 @@ class AdminDS(adm.PodcastDatastore):
 
         for attribute in ["title", "description", "duration", "audio_format"]:
 
-            if attribute in kwargs:
+            if kwargs.get(attribute) is not None:
                 episodes[select][attribute] = kwargs[attribute]
 
         if kwargs.get("publication_date") is not None:

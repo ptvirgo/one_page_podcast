@@ -137,10 +137,10 @@ class AdminPodcast:
             title = audio_file.tags.get("title")
             description = audio_file.tags.get("description")
 
-        if title is list:
+        if type(title) is list:
             title = title[0]
 
-        if description is list:
+        if type(description) is list:
             description = description[0]
 
         return {"audio_format": audio_format.value,
