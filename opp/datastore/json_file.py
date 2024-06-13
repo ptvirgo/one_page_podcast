@@ -14,7 +14,7 @@ class AdminDS(adm.PodcastDatastore):
     """Provide a dependency inversion layer so that arbitrary data-storage backends can be made compatible with the administrator's use-cases."""
 
     def __init__(self, data_dir):
-        self._data_path = data_dir / "opp.json"
+        self._opp_json = data_dir / "opp.json"
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
@@ -35,13 +35,13 @@ class AdminDS(adm.PodcastDatastore):
             }
         }
 
-        with open(self._data_path, "w") as file:
+        with open(self._opp_json, "w") as file:
             json.dump(channel_data, file)
 
     def get_channel(self):
         """Produce the podcast.Channel."""
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
             chdata = podcast_data["channel"]
 
@@ -52,7 +52,7 @@ class AdminDS(adm.PodcastDatastore):
     def update_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Update the externally stored podcast channel information."""
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
 
         chdata = {
@@ -70,7 +70,7 @@ class AdminDS(adm.PodcastDatastore):
 
         podcast_data["channel"] = chdata
 
-        with open(self._data_path, "w") as file:
+        with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
 
     def create_episode(self, title, description, guid, duration, publication_date, audio_format):
@@ -84,7 +84,7 @@ class AdminDS(adm.PodcastDatastore):
             "audio_format": audio_format,
         }
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
 
         if type(podcast_data.get("episodes")) is list:
@@ -94,13 +94,13 @@ class AdminDS(adm.PodcastDatastore):
 
         podcast_data["episodes"].sort(key=lambda ep: ep["publication_date"], reverse=True)
 
-        with open(self._data_path, "w") as file:
+        with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
 
         if "episodes" in podcast_data:
@@ -134,7 +134,7 @@ class AdminDS(adm.PodcastDatastore):
         Return: None
         """
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
 
         episodes = podcast_data.get("episodes", [])
@@ -152,13 +152,13 @@ class AdminDS(adm.PodcastDatastore):
 
         podcast_data["episodes"] = episodes
 
-        with open(self._data_path, "w") as file:
+        with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
 
     def delete_episode(self, guid):
         """Delete an episode."""
 
-        with open(self._data_path, "r") as file:
+        with open(self._opp_json, "r") as file:
             podcast_data = json.load(file)
 
         episodes = podcast_data.get("episodes", [])
@@ -169,5 +169,5 @@ class AdminDS(adm.PodcastDatastore):
 
         podcast_data["episodes"] = episodes
 
-        with open(self._data_path, "w") as file:
+        with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)

@@ -16,8 +16,8 @@ class TestAdminDS:
 
     @pytest.fixture
     def datastore(self, tmp_path):
-        data_dir = Path(tmp_path)
-        ds = jsf.AdminDS(data_dir)
+        ds_dir = Path(tmp_path)
+        ds = jsf.AdminDS(ds_dir)
         yield ds
 
     def test_initialize_channel(self, datastore):
