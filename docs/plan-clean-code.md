@@ -2,8 +2,8 @@
 
 ## TODO:
 
-- CLI: CRUD episodes
 - Use a configuration file / interface
+    - Hash password with python 'scrypt' library.
 - Episode files as File like objects
 - Admin "create episode" as a user story
     - admin interface has an "extract details" function 

@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import opp.datastore.json_file as jsf
+
+import pytest
+from pathlib import Path
 import tests.factories as factories
+
 
 # write a test of AdminDS features.
 
@@ -10,11 +14,16 @@ import tests.factories as factories
 class TestAdminDS:
     """Test the AdminDS features."""
 
-    def test_initialize_channel(self, tmp_path):
+    @pytest.fixture
+    def datastore(self, tmp_path):
+        data_dir = Path(tmp_path)
+        ds = jsf.AdminDS(data_dir)
+        yield ds
+
+    def test_initialize_channel(self, datastore):
         """Make sure we can initialize and retrieve the channel."""
 
         channel = factories.ChannelFactory()
-        datastore = jsf.AdminDS(tmp_path / "test_initialize_channel.js")
 
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
@@ -31,10 +40,8 @@ class TestAdminDS:
         assert result.explicit == channel.explicit
         assert result.keywords == channel.keywords
 
-    def test_update_channel(self, tmp_path):
+    def test_update_channel(self, datastore):
         """Make sure we can update the channel."""
-
-        datastore = jsf.AdminDS(tmp_path / "test_update_channel.js")
         fst = factories.ChannelFactory()
         snd = factories.ChannelFactory()
 
@@ -54,10 +61,8 @@ class TestAdminDS:
         assert result.explicit == snd.explicit
         assert result.keywords == snd.keywords
 
-    def test_create_episode(self, tmp_path):
+    def test_create_episode(self, datastore):
         """Make sure we can create and retrieve episodes."""
-
-        datastore = jsf.AdminDS(tmp_path / "test_create_epsiode.json")
 
         channel = factories.ChannelFactory()
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
@@ -75,10 +80,9 @@ class TestAdminDS:
         for i in range(3):
             assert results[i] == episodes[i]
 
-    def test_update_episode(self, tmp_path):
+    def test_update_episode(self, datastore):
         """Make sure we can update an episode."""
 
-        datastore = jsf.AdminDS(tmp_path / "test_update_episode.json")
         channel = factories.ChannelFactory()
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
@@ -107,10 +111,9 @@ class TestAdminDS:
         control_post = datastore.get_episodes()[0]
         assert control_post == control_prior
 
-    def test_delete_episode(self, tmp_path):
+    def test_delete_episode(self, datastore):
         """Make sure we can delete an episode."""
 
-        datastore = jsf.AdminDS(tmp_path / "test_delete_episode.json")
         channel = factories.ChannelFactory()
         datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 

@@ -13,8 +13,8 @@ class AdminDS(adm.PodcastDatastore):
 
     """Provide a dependency inversion layer so that arbitrary data-storage backends can be made compatible with the administrator's use-cases."""
 
-    def __init__(self, data_path):
-        self._data_path = data_path
+    def __init__(self, data_dir):
+        self._data_path = data_dir / "opp.json"
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
