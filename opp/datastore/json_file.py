@@ -14,7 +14,8 @@ class AdminDS(adm.PodcastDatastore):
     """Provide a dependency inversion layer so that arbitrary data-storage backends can be made compatible with the administrator's use-cases."""
 
     def __init__(self, data_dir):
-        self._opp_json = data_dir / "opp.json"
+        self._data_dir = data_dir
+        self._opp_json = self._data_dir / "opp.json"
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
@@ -73,8 +74,14 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
 
-    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
+
+        audio_file_path = self.audio_file_path(guid, audio_format)
+
+        with open(audio_file_path, "wb") as file:
+            file.write(input_file_handle.read())
+
         ep_data = {
             "title": title,
             "description": description,
@@ -96,6 +103,11 @@ class AdminDS(adm.PodcastDatastore):
 
         with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
+
+    def audio_file_path(self, guid, audio_format):
+        """Produce the path name for an episode."""
+        ext = podcast.audio_extension(audio_format)
+        return self._data_dir / f"{guid}.{ext}"
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""

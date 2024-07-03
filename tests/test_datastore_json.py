@@ -2,32 +2,73 @@
 # -*- coding: utf-8 -*-
 
 import opp.datastore.json_file as jsf
+from opp.podcast import AudioFormat
 
 import pytest
 from pathlib import Path
-import tests.factories as factories
 
+
+import tests.factories as factories
+from uuid import UUID
+
+data_dir = Path(__file__).parent / "data"
 
 # write a test of AdminDS features.
 
 
-class TestAdminDS:
-    """Test the AdminDS features."""
+# Fixtures
 
-    @pytest.fixture
-    def datastore(self, tmp_path):
+def audio_file(audio_format):
+
+    if audio_format == AudioFormat.OggOpus:
+        return data_dir / "speech_16.opus"
+
+    if audio_format == AudioFormat.OggVorbis:
+        return data_dir / "speech.ogg"
+
+    return data_dir / "speech_32.mp3"
+
+
+def initialize_datastore(ds, episodes=3):
+    channel = factories.ChannelFactory()
+    ds.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+
+    for i in range(episodes):
+        ep = factories.EpisodeFactory()
+
+        with open(audio_file(ep.audio_format), "rb") as file:
+            ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+
+
+@pytest.fixture
+def datastore(tmp_path):
+
+    def make_datastore(initialize=True, episodes=3):
         ds_dir = Path(tmp_path)
         ds = jsf.AdminDS(ds_dir)
-        yield ds
+
+        if initialize:
+            initialize_datastore(ds, episodes=episodes)
+
+        return ds
+
+    return make_datastore
+
+
+# Tests
+
+class TestAdminDS:
+    """Test the AdminDS features."""
 
     def test_initialize_channel(self, datastore):
         """Make sure we can initialize and retrieve the channel."""
 
         channel = factories.ChannelFactory()
 
-        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+        ds = datastore(initialize=False)
+        ds.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
-        result = datastore.get_channel()
+        result = ds.get_channel()
 
         assert result.title == channel.title
         assert result.link == channel.link
@@ -45,10 +86,12 @@ class TestAdminDS:
         fst = factories.ChannelFactory()
         snd = factories.ChannelFactory()
 
-        datastore.initialize_channel(fst.title, fst.link, fst.description, fst.image, fst.author, fst.email, fst.language, fst.category, fst.explicit, fst.keywords)
-        datastore.update_channel(snd.title, snd.link, snd.description, snd.image, snd.author, snd.email, snd.language, snd.category, snd.explicit, snd.keywords)
+        ds = datastore(initialize=False)
 
-        result = datastore.get_channel()
+        ds.initialize_channel(fst.title, fst.link, fst.description, fst.image, fst.author, fst.email, fst.language, fst.category, fst.explicit, fst.keywords)
+        ds.update_channel(snd.title, snd.link, snd.description, snd.image, snd.author, snd.email, snd.language, snd.category, snd.explicit, snd.keywords)
+
+        result = ds.get_channel()
 
         assert result.title == snd.title
         assert result.link == snd.link
@@ -61,36 +104,49 @@ class TestAdminDS:
         assert result.explicit == snd.explicit
         assert result.keywords == snd.keywords
 
+    def test_file_path(self, datastore):
+        """Make sure the datastore file path is sane."""
+
+        ds = datastore(False)
+        test_id = UUID('eb8766d0-ea67-4de4-bdb5-ef279fe7efb4')
+
+        opus_path = ds.audio_file_path(test_id, AudioFormat.OggOpus.value)
+        assert opus_path.name == "eb8766d0-ea67-4de4-bdb5-ef279fe7efb4.opus"
+
+        vorbis_path = ds.audio_file_path(test_id, AudioFormat.OggVorbis.value)
+        assert vorbis_path.name == "eb8766d0-ea67-4de4-bdb5-ef279fe7efb4.ogg"
+
+        mp3_path = ds.audio_file_path(test_id, AudioFormat.MP3.value)
+        assert mp3_path.name == "eb8766d0-ea67-4de4-bdb5-ef279fe7efb4.mp3"
+
     def test_create_episode(self, datastore):
         """Make sure we can create and retrieve episodes."""
-
-        channel = factories.ChannelFactory()
-        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+        ds = datastore(initialize=True, episodes=0)
 
         episodes = []
 
         for i in range(3):
             ep = factories.EpisodeFactory()
             episodes.append(ep)
-            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+
+            with open(audio_file(ep.audio_format), "rb") as file:
+                ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
 
         episodes.sort(key=lambda ep: ep.publication_date, reverse=True)
-        results = datastore.get_episodes()
+        results = ds.get_episodes()
 
         for i in range(3):
             assert results[i] == episodes[i]
+            audio_file_path = ds.audio_file_path(results[i].guid, results[i].audio_format)
+
+            assert audio_file_path.exists()
+            assert not audio_file_path.is_dir()
 
     def test_update_episode(self, datastore):
         """Make sure we can update an episode."""
 
-        channel = factories.ChannelFactory()
-        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
-
-        for i in range(3):
-            ep = factories.EpisodeFactory()
-            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
-
-        episodes = datastore.get_episodes()
+        ds = datastore()
+        episodes = ds.get_episodes()
 
         control_prior = episodes[0]
         old = episodes[1]
@@ -99,32 +155,27 @@ class TestAdminDS:
 
         for attribute in ["title", "description", "duration", "publication_date"]:
             value = getattr(new, attribute)
-            datastore.update_episode(str(old.guid), **{attribute: value})
-            updated = datastore.get_episodes()[1]
+            ds.update_episode(str(old.guid), **{attribute: value})
+            updated = ds.get_episodes()[1]
 
             assert getattr(updated, attribute) == value
 
-        datastore.update_episode(str(old.guid), audio_format=new.audio_format.value)
-        updated = datastore.get_episodes()[1]
+        ds.update_episode(str(old.guid), audio_format=new.audio_format.value)
+        updated = ds.get_episodes()[1]
         assert updated.audio_format == new.audio_format
 
-        control_post = datastore.get_episodes()[0]
+        control_post = ds.get_episodes()[0]
         assert control_post == control_prior
 
     def test_delete_episode(self, datastore):
         """Make sure we can delete an episode."""
 
-        channel = factories.ChannelFactory()
-        datastore.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+        ds = datastore()
 
-        for i in range(3):
-            ep = factories.EpisodeFactory()
-            datastore.create_episode(ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+        prior_episodes = ds.get_episodes()
+        ds.delete_episode(str(prior_episodes[1].guid))
 
-        prior_episodes = datastore.get_episodes()
-        datastore.delete_episode(str(prior_episodes[1].guid))
-
-        post_episodes = datastore.get_episodes()
+        post_episodes = ds.get_episodes()
 
         assert len(post_episodes) == 2
 
