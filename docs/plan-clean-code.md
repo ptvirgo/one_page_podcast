@@ -2,9 +2,22 @@
 
 ## TODO:
 
+As admin, I want to create Episodes by uploading a file, with automatic extraction of available information.
+- Admin "parse audio file" accepts a file handle
+    - produces dict of
+        - audio format
+        - duration
+        - (optional) title
+        - (optional) description
+
+- Admin interface "create episode"
+    - accepts file handle & all arguments except guid
+    - creates the guid
+    - uses datastore interface to save data
+    - returns a guid upon success
+
 - Use a configuration file / interface
     - Hash password with python 'scrypt' library.
-- Episode files as File like objects
 - Admin "create episode" as a user story
     - admin interface has an "extract details" function 
 
