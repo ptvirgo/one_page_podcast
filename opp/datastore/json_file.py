@@ -141,7 +141,6 @@ class AdminDS(adm.PodcastDatastore):
             - description
             - duration
             - publication_date
-            - audio_format
 
         Return: None
         """
@@ -154,7 +153,7 @@ class AdminDS(adm.PodcastDatastore):
 
         select = guids.index(guid)
 
-        for attribute in ["title", "description", "duration", "audio_format"]:
+        for attribute in ["title", "description", "duration"]:
 
             if kwargs.get(attribute) is not None:
                 episodes[select][attribute] = kwargs[attribute]

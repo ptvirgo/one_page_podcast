@@ -42,7 +42,7 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
+    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None):
         """Update an existing episode."""
         pass
 
@@ -106,7 +106,7 @@ class AdminPodcast:
     def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
         """Update an existing episode."""
 
-        self.datastore.update_episode(guid, title=title, description=description, duration=duration, publication_date=publication_date, audio_format=audio_format)
+        self.datastore.update_episode(guid, title=title, description=description, duration=duration, publication_date=publication_date)
 
     def delete_episode(self, guid):
         """Delete an episode."""
