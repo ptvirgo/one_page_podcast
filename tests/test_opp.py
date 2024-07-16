@@ -122,7 +122,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         """Produce an iterable of podcast.Episodes."""
         return self._episodes
 
-    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):
+    def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None):
         """Update an existing episode."""
 
         guids = [ep.guid for ep in self._episodes]
@@ -140,9 +140,6 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
         if publication_date is not None:
             episode.publication_date = publication_date
-
-        if audio_format is not None:
-            episode.audio_format = AudioFormat(audio_format)
 
     def delete_episode(self, guid):
         """Delete an episode."""
@@ -261,9 +258,6 @@ class TestAdministrator:
 
         admin_interface.update_episode(prev.guid, publication_date=new.publication_date)
         assert prev.publication_date == new.publication_date
-
-        admin_interface.update_episode(prev.guid, audio_format=new.audio_format.value)
-        assert prev.audio_format == new.audio_format
 
     def test_delete_episode(self):
         datastore = AdministratorTestStore(3)

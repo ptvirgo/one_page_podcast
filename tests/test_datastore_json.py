@@ -160,10 +160,6 @@ class TestAdminDS:
 
             assert getattr(updated, attribute) == value
 
-        ds.update_episode(str(old.guid), audio_format=new.audio_format.value)
-        updated = ds.get_episodes()[1]
-        assert updated.audio_format == new.audio_format
-
         control_post = ds.get_episodes()[0]
         assert control_post == control_prior
 
