@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
+import pytest
 from uuid import UUID
 
 from opp.podcast import Channel, Episode, AudioFormat
@@ -9,7 +11,6 @@ import opp.administrator as administrator
 import opp.visitor as visitor
 
 import tests.factories as factories
-from pathlib import Path
 
 
 data_dir = Path(__file__).parent / "data"
@@ -17,9 +18,9 @@ data_dir = Path(__file__).parent / "data"
 
 class VisitorTestStore(visitor.PodcastDatastore):
 
-    def __init__(self):
-        self.channel = factories.ChannelFactory()
-        self.episodes = [factories.EpisodeFactory(), factories.EpisodeFactory(), factories.EpisodeFactory()]
+    def __init__(self, channel, episodes):
+        self.channel = channel
+        self.episodes = sorted(episodes, key=lambda ep: ep.publication_date)
 
     def get_channel(self):
         return self.channel
@@ -28,26 +29,32 @@ class VisitorTestStore(visitor.PodcastDatastore):
         return self.episodes
 
 
+@pytest.fixture
+def visitor_store():
+    channel = factories.ChannelFactory()
+    episodes = [factories.EpisodeFactory(), factories.EpisodeFactory(), factories.EpisodeFactory()]
+    return VisitorTestStore(channel, episodes)
+
+
 class TestVisitor:
 
-    def test_visit(self):
-        loader = VisitorTestStore()
-        vp = visitor.VisitPodcast(loader)
+    def test_visit(self, visitor_store):
+        vp = visitor.VisitPodcast(visitor_store)
 
         result = vp.podcast_data()
 
-        assert result["channel"]["title"] == loader.channel.title
-        assert result["channel"]["link"] == loader.channel.link
-        assert result["channel"]["description"] == loader.channel.description
-        assert result["channel"]["image"] == loader.channel.image
-        assert result["channel"]["author"] == loader.channel.author
-        assert result["channel"]["email"] == loader.channel.email
-        assert result["channel"]["language"] == loader.channel.language
-        assert result["channel"]["category"] == loader.channel.category
-        assert result["channel"]["explicit"] == loader.channel.explicit
-        assert result["channel"]["keywords"] == loader.channel.keywords
+        assert result["channel"]["title"] == visitor_store.channel.title
+        assert result["channel"]["link"] == visitor_store.channel.link
+        assert result["channel"]["description"] == visitor_store.channel.description
+        assert result["channel"]["image"] == visitor_store.channel.image
+        assert result["channel"]["author"] == visitor_store.channel.author
+        assert result["channel"]["email"] == visitor_store.channel.email
+        assert result["channel"]["language"] == visitor_store.channel.language
+        assert result["channel"]["category"] == visitor_store.channel.category
+        assert result["channel"]["explicit"] == visitor_store.channel.explicit
+        assert result["channel"]["keywords"] == visitor_store.channel.keywords
 
-        episode = loader.episodes[0]
+        episode = visitor_store.episodes[0]
         episode_result = result["episodes"][0]
 
         assert episode_result["title"] == episode.title
@@ -57,19 +64,14 @@ class TestVisitor:
         assert episode_result["publication_date"] == episode.publication_date.isoformat()
         assert episode_result["audio_format"] == episode.audio_format.value
 
-        assert len(result["episodes"]) == len(loader.episodes)
+        assert len(result["episodes"]) == len(visitor_store.episodes)
 
 
 class AdministratorTestStore(administrator.PodcastDatastore):
 
-    def __init__(self, make_episodes=0):
-        self._channel = factories.ChannelFactory()
+    def __init__(self):
+        self._channel = None
         self._episodes = []
-
-        for i in range(make_episodes):
-            self._episodes.append(factories.EpisodeFactory())
-
-        self._episodes.sort(key=lambda ep: ep.publication_date)
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         self._channel = Channel(title=title, link=link, description=description, image=image, author=author, email=email, language=language, category=category, explicit=explicit, keywords=keywords)
@@ -111,7 +113,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         if type(keywords) is list:
             self._channel.keywords = keywords
 
-    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, file_handle, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
         episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format))
 
@@ -147,11 +149,37 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         self._episodes = [ep for ep in self._episodes if ep.guid != guid]
 
 
+def make_admin_datastore(initialize=True, episode_count=0):
+    ds = AdministratorTestStore()
+
+    if initialize:
+        channel = factories.ChannelFactory()
+        ds.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
+
+        for i in range(episode_count):
+            ep = factories.EpisodeFactory()
+            ds.create_episode(None, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+
+    return ds
+
+
+@pytest.fixture
+def admin_store():
+    return make_admin_datastore
+
+
+@pytest.fixture
+def admin_interface():
+    datastore = make_admin_datastore()
+    admin_interface = administrator.AdminPodcast(datastore)
+
+    yield admin_interface
+
+
 class TestAdministrator:
 
-    def test_initialize_channel(self):
-        datastore = AdministratorTestStore()
-        datastore._channel = None
+    def test_initialize_channel(self, admin_store):
+        datastore = admin_store(initialize=False)
 
         expect = factories.ChannelFactory()
         admin_interface = administrator.AdminPodcast(datastore)
@@ -171,8 +199,8 @@ class TestAdministrator:
         assert result["explicit"] == expect.explicit
         assert result["keywords"] == expect.keywords
 
-    def test_get_channel(self):
-        datastore = AdministratorTestStore()
+    def test_get_channel(self, admin_store):
+        datastore = admin_store()
         admin_interface = administrator.AdminPodcast(datastore)
 
         result = admin_interface.get_channel()
@@ -189,9 +217,9 @@ class TestAdministrator:
         assert result["explicit"] == expect.explicit
         assert result["keywords"] == expect.keywords
 
-    def test_get_episodes(self):
+    def test_get_episodes(self, admin_store):
         count = 3
-        datastore = AdministratorTestStore(make_episodes=count)
+        datastore = admin_store(episode_count=count)
         admin_interface = administrator.AdminPodcast(datastore)
 
         results = admin_interface.get_episodes()
@@ -208,9 +236,7 @@ class TestAdministrator:
         for i in range(count):
             check_episode(results[i], expects[i])
 
-    def test_update_channel(self):
-        datastore = AdministratorTestStore()
-        admin_interface = administrator.AdminPodcast(datastore)
+    def test_update_channel(self, admin_interface):
         new = factories.ChannelFactory()
 
         admin_interface.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
@@ -227,21 +253,26 @@ class TestAdministrator:
         assert result["explicit"] == new.explicit
         assert result["keywords"] == new.keywords
 
-    def test_create_episode(self):
-        datastore = AdministratorTestStore(2)
+    def test_create_episode(self, admin_store):
+        datastore = admin_store(episode_count=2)
         admin_interface = administrator.AdminPodcast(datastore)
         new = factories.EpisodeFactory()
 
-        admin_interface.create_episode(new.title, new.description, new.guid, new.duration, new.publication_date, new.audio_format.value)
+        guid = admin_interface.create_episode(None, new.title, new.description, new.duration, new.publication_date, new.audio_format.value)
 
-        guids = [ep.guid for ep in datastore._episodes]
-        select = guids.index(new.guid)
-        result = datastore._episodes[select]
+        guids = [str(ep.guid) for ep in datastore._episodes]
+        select = guids.index(guid)
 
-        assert dict(result) == dict(new)
+        result = dict(datastore._episodes[select])
+        result.pop("guid")
 
-    def test_update_episode(self):
-        datastore = AdministratorTestStore(3)
+        expect = dict(new)
+        expect.pop("guid")
+
+        assert result == expect
+
+    def test_update_episode(self, admin_store):
+        datastore = admin_store(episode_count=3)
         admin_interface = administrator.AdminPodcast(datastore)
 
         prev = datastore._episodes[1]
@@ -259,8 +290,8 @@ class TestAdministrator:
         admin_interface.update_episode(prev.guid, publication_date=new.publication_date)
         assert prev.publication_date == new.publication_date
 
-    def test_delete_episode(self):
-        datastore = AdministratorTestStore(3)
+    def test_delete_episode(self, admin_store):
+        datastore = admin_store(episode_count=3)
         admin_interface = administrator.AdminPodcast(datastore)
 
         guid = datastore._episodes[1].guid

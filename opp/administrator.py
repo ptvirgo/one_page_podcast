@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from .podcast import Channel, Episode, AudioFormat
-
 import mutagen
+from uuid import uuid4
+
+from .podcast import Channel, Episode, AudioFormat
 
 """
 Administrator use case code & interface definition.
@@ -32,7 +33,7 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
         pass
 
@@ -92,12 +93,14 @@ class AdminPodcast:
 
         self.datastore.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
 
-    def create_episode(self, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, duration, publication_date, audio_format):
         """Save a new episode."""
 
+        guid = uuid4()
         new = Episode(title, description, guid, duration, publication_date, AudioFormat(audio_format))
+        self.datastore.create_episode(input_file_handle, new.title, new.description, str(new.guid), new.duration, new.publication_date, new.audio_format.value)
 
-        self.datastore.create_episode(new.title, new.description, str(new.guid), new.duration, new.publication_date, new.audio_format.value)
+        return str(new.guid)
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""
