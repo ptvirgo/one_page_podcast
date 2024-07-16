@@ -113,7 +113,8 @@ def create_episode(args):
     else:
         publication_date = date.fromisoformat(publication_date_string)
 
-    podcast_admin.create_episode(title, description, uuid4(), details["duration"], publication_date, details["audio_format"])
+    with open(args.file, "rb") as file:
+        podcast_admin.create_episode(file, title, description, details["duration"], publication_date, details["audio_format"])
 
 
 def list_episode_parser(parser):
