@@ -4,10 +4,16 @@
 import argparse
 import opp.administrator as administrator
 import opp.datastore.json_file as jsf
-from uuid import uuid4
 
 from datetime import date
 from pathlib import Path
+from os import environ
+
+
+if "OPP" in environ:
+    DATASTORE = Path(environ["OPP"])
+else:
+    DATASTORE = Path(environ["HOME"]) / ".config/opp/"
 
 
 def initialize_channel_parser(parser):
@@ -29,7 +35,7 @@ def initialize_channel_parser(parser):
 
 def initialize_channel(args):
     """Initialize a podcast channel."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
 
     podcast_admin.initialize_channel(args.title, args.link, args.description, None, args.author, args.email, args.language, args.category, args.explicit, args.keyword)
 
@@ -41,7 +47,7 @@ def show_channel_parser(parser):
 
 
 def show_channel(args):
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
     channel = podcast_admin.get_channel()
 
     if channel.get("keywords") is None:
@@ -74,7 +80,7 @@ def update_channel_parser(parser):
 
 def update_channel(args):
     """Update the channel."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
     podcast_admin.update_channel(title=args.title, description=args.description, link=args.link, author=args.author, email=args.email, category=args.category, language=args.language, explicit=args.explicit, keywords=args.keyword)
 
 
@@ -91,7 +97,7 @@ def create_episode_parser(parser):
 
 def create_episode(args):
     """Store an episode based on the arguments."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
 
     with open(args.file, "rb") as file:
         details = podcast_admin.extract_details(file)
@@ -126,7 +132,7 @@ def list_episode_parser(parser):
 
 def list_episodes(args):
     """List episodes."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
 
     for ep in podcast_admin.get_episodes():
         print(f"{ep['guid']}: ({ep['publication_date']}) {ep['title']} - {ep['description']}")
@@ -145,7 +151,7 @@ def update_episode_parser(parser):
 
 def update_episode(args):
     """Update an episode."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
 
     podcast_admin.update_episode(args.guid, title=args.title, description=args.description, publication_date=args.publication_date)
 
@@ -160,7 +166,7 @@ def delete_episode_parser(parser):
 
 def delete_episode(args):
     """Delete an episode."""
-    podcast_admin = admin_interface(args.path)
+    podcast_admin = admin_interface(DATASTORE)
     podcast_admin.delete_episode(args.guid)
 
 
@@ -173,8 +179,6 @@ def admin_interface(path_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Manage your One Page Podcast")
-    parser.add_argument("path", type=str, help="Path for datastore.")
-
     subparsers = parser.add_subparsers(title="Commands", required=True)
 
     initialize_channel_parser(subparsers.add_parser("initialize"))
@@ -187,6 +191,8 @@ def main():
     delete_episode_parser(subparsers.add_parser("delete-episode"))
 
     args = parser.parse_args()
+
+    DATASTORE.mkdir(parents=True, exist_ok=True)
     args.func(args)
 
 

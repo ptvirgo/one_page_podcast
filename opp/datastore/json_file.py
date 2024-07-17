@@ -176,7 +176,10 @@ class AdminDS(adm.PodcastDatastore):
         guids = [ep["guid"] for ep in episodes]
 
         select = guids.index(guid)
-        episodes.pop(select)
+
+        ep = episodes.pop(select)
+        ep_path = self.audio_file_path(ep["guid"], ep["audio_format"])
+        ep_path.unlink()
 
         podcast_data["episodes"] = episodes
 
