@@ -29,7 +29,7 @@ def audio_file(audio_format):
     return data_dir / "speech_32.mp3"
 
 
-def initialize_datastore(ds, episodes=3):
+def initialize_admin_ds(ds, episodes=3):
     channel = factories.ChannelFactory()
     ds.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
@@ -41,14 +41,14 @@ def initialize_datastore(ds, episodes=3):
 
 
 @pytest.fixture
-def datastore(tmp_path):
+def admin_ds(tmp_path):
 
     def make_datastore(initialize=True, episodes=3):
         ds_dir = Path(tmp_path)
         ds = jsf.AdminDS(ds_dir)
 
         if initialize:
-            initialize_datastore(ds, episodes=episodes)
+            initialize_admin_ds(ds, episodes=episodes)
 
         return ds
 
@@ -61,7 +61,7 @@ def visitor_ds(tmp_path):
     ds_dir = Path(tmp_path)
     admin_ds = jsf.AdminDS(ds_dir)
 
-    initialize_datastore(admin_ds, episodes=3)
+    initialize_admin_ds(admin_ds, episodes=3)
 
     return jsf.VisitorDS(ds_dir)
 
@@ -87,12 +87,12 @@ class TestVisitorDS:
 class TestAdminDS:
     """Test the AdminDS features."""
 
-    def test_initialize_channel(self, datastore):
+    def test_initialize_channel(self, admin_ds):
         """Make sure we can initialize and retrieve the channel."""
 
         channel = factories.ChannelFactory()
 
-        ds = datastore(initialize=False)
+        ds = admin_ds(initialize=False)
         ds.initialize_channel(channel.title, channel.link, channel.description, channel.image, channel.author, channel.email, channel.language, channel.category, channel.explicit, channel.keywords)
 
         result = ds.get_channel()
@@ -108,12 +108,12 @@ class TestAdminDS:
         assert result.explicit == channel.explicit
         assert result.keywords == channel.keywords
 
-    def test_update_channel(self, datastore):
+    def test_update_channel(self, admin_ds):
         """Make sure we can update the channel."""
         fst = factories.ChannelFactory()
         snd = factories.ChannelFactory()
 
-        ds = datastore(initialize=False)
+        ds = admin_ds(initialize=False)
 
         ds.initialize_channel(fst.title, fst.link, fst.description, fst.image, fst.author, fst.email, fst.language, fst.category, fst.explicit, fst.keywords)
         ds.update_channel(snd.title, snd.link, snd.description, snd.image, snd.author, snd.email, snd.language, snd.category, snd.explicit, snd.keywords)
@@ -131,10 +131,10 @@ class TestAdminDS:
         assert result.explicit == snd.explicit
         assert result.keywords == snd.keywords
 
-    def test_file_path(self, datastore):
+    def test_file_path(self, admin_ds):
         """Make sure the datastore file path is sane."""
 
-        ds = datastore(False)
+        ds = admin_ds(False)
         test_id = UUID('eb8766d0-ea67-4de4-bdb5-ef279fe7efb4')
 
         opus_path = ds.audio_file_path(test_id, AudioFormat.OggOpus.value)
@@ -146,9 +146,9 @@ class TestAdminDS:
         mp3_path = ds.audio_file_path(test_id, AudioFormat.MP3.value)
         assert mp3_path.name == "eb8766d0-ea67-4de4-bdb5-ef279fe7efb4.mp3"
 
-    def test_create_episode(self, datastore):
+    def test_create_episode(self, admin_ds):
         """Make sure we can create and retrieve episodes."""
-        ds = datastore(initialize=True, episodes=0)
+        ds = admin_ds(initialize=True, episodes=0)
 
         episodes = []
 
@@ -169,10 +169,10 @@ class TestAdminDS:
             assert audio_file_path.exists()
             assert not audio_file_path.is_dir()
 
-    def test_update_episode(self, datastore):
+    def test_update_episode(self, admin_ds):
         """Make sure we can update an episode."""
 
-        ds = datastore()
+        ds = admin_ds()
         episodes = ds.get_episodes()
 
         control_prior = episodes[0]
@@ -190,10 +190,10 @@ class TestAdminDS:
         control_post = ds.get_episodes()[0]
         assert control_post == control_prior
 
-    def test_delete_episode(self, datastore):
+    def test_delete_episode(self, admin_ds):
         """Make sure we can delete an episode."""
 
-        ds = datastore()
+        ds = admin_ds()
 
         prior_episodes = ds.get_episodes()
         ds.delete_episode(str(prior_episodes[1].guid))
