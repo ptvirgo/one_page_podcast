@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import opp.datastore.json_file as jsf
-from opp.podcast import AudioFormat
+from opp.podcast import AudioFormat, Channel, Episode
 
 import pytest
 from pathlib import Path
@@ -55,7 +55,34 @@ def datastore(tmp_path):
     return make_datastore
 
 
+@pytest.fixture
+def visitor_ds(tmp_path):
+
+    ds_dir = Path(tmp_path)
+    admin_ds = jsf.AdminDS(ds_dir)
+
+    initialize_datastore(admin_ds, episodes=3)
+
+    return jsf.VisitorDS(ds_dir)
+
+
 # Tests
+
+class TestVisitorDS:
+    """Test the VisitorDS features."""
+
+    def test_get_channel(self, visitor_ds):
+        channel = visitor_ds.get_channel()
+
+        assert type(channel) is Channel
+
+    def test_get_episodes(self, visitor_ds):
+        episodes = visitor_ds.get_episodes()
+        assert len(episodes) == 3
+
+        for ep in episodes:
+            assert type(ep) is Episode
+
 
 class TestAdminDS:
     """Test the AdminDS features."""

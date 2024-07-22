@@ -9,13 +9,45 @@ import opp.visitor as visitor
 import opp.administrator as adm
 
 
+opp_json = "opp.json"
+
+
+def data_to_episode(ep_data):
+    """Convert the JSON data to an Episode object."""
+
+    episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]))
+    return episode
+
+
+class VisitorDS(visitor.PodcastDatastore):
+
+    """Provide a visitor Datastore using a JSON file backend."""
+
+    def __init__(self, data_dir):
+
+        with open(data_dir / opp_json, "r") as file:
+            podcast_data = json.load(file)
+
+        channel_data = podcast_data["channel"]
+        self._channel = podcast.Channel(channel_data["title"], channel_data["link"], channel_data["description"], channel_data["image"], channel_data["author"], channel_data["email"], channel_data["language"], channel_data["category"], channel_data["explicit"], channel_data["keywords"])
+
+        episode_data = podcast_data["episodes"]
+        self._episodes = [data_to_episode(ep) for ep in episode_data]
+
+    def get_channel(self):
+        return self._channel
+
+    def get_episodes(self):
+        return self._episodes
+
+
 class AdminDS(adm.PodcastDatastore):
 
-    """Provide a dependency inversion layer so that arbitrary data-storage backends can be made compatible with the administrator's use-cases."""
+    """Provide an Administrator Datastore using a JSON file backend."""
 
     def __init__(self, data_dir):
         self._data_dir = data_dir
-        self._opp_json = self._data_dir / "opp.json"
+        self._opp_json = self._data_dir / opp_json
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
@@ -120,14 +152,7 @@ class AdminDS(adm.PodcastDatastore):
         else:
             episode_data = []
 
-        return [self.data_to_episode(ep) for ep in episode_data]
-
-    @staticmethod
-    def data_to_episode(ep_data):
-        """Convert the JSON data to an Episode object."""
-
-        episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]))
-        return episode
+        return [data_to_episode(ep) for ep in episode_data]
 
     def update_episode(self, guid, **kwargs):
         """
