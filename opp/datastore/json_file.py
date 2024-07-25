@@ -9,7 +9,8 @@ import opp.visitor as visitor
 import opp.administrator as adm
 
 
-opp_json = "opp.json"
+OPP_JSON = "opp.json"
+EPISODE_DIR = "episodes/"
 
 
 def data_to_episode(ep_data):
@@ -25,7 +26,7 @@ class VisitorDS(visitor.PodcastDatastore):
 
     def __init__(self, data_dir):
 
-        with open(data_dir / opp_json, "r") as file:
+        with open(data_dir / OPP_JSON, "r") as file:
             podcast_data = json.load(file)
 
         channel_data = podcast_data["channel"]
@@ -33,12 +34,17 @@ class VisitorDS(visitor.PodcastDatastore):
 
         episode_data = podcast_data["episodes"]
         self._episodes = [data_to_episode(ep) for ep in episode_data]
+        self._episode_dir = data_dir / EPISODE_DIR
 
     def get_channel(self):
         return self._channel
 
     def get_episodes(self):
         return self._episodes
+
+    @property
+    def episode_dir(self):
+        return self._episode_dir
 
 
 class AdminDS(adm.PodcastDatastore):
@@ -47,7 +53,10 @@ class AdminDS(adm.PodcastDatastore):
 
     def __init__(self, data_dir):
         self._data_dir = data_dir
-        self._opp_json = self._data_dir / opp_json
+        self._opp_json = self._data_dir / OPP_JSON
+        self._episode_dir = self._data_dir / EPISODE_DIR
+
+        self._episode_dir.mkdir(exist_ok=True)
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
@@ -139,7 +148,7 @@ class AdminDS(adm.PodcastDatastore):
     def audio_file_path(self, guid, audio_format):
         """Produce the path name for an episode."""
         ext = podcast.audio_extension(audio_format)
-        return self._data_dir / f"{guid}.{ext}"
+        return self._episode_dir / f"{guid}.{ext}"
 
     def get_episodes(self):
         """Produce an iterable of podcast.Episodes."""

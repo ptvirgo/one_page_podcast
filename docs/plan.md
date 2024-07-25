@@ -1,144 +1,44 @@
-# One Page Podcast
+# Clean Architecture Remix
 
-Develop an app allowing podcast authors to easily self-host their content.
+## TODO:
 
-Ideally:
-    - One-click install
-    - One-click uploads
-    - Stand-alone app, assumes you do not want or need additional content on the same subdomain.
+1. Audio files are downloadable
+2. RSS
+3. HTML front end
 
+### Web interface
 
-## References:
-
-https://www.thepolyglotdeveloper.com/2016/02/create-podcast-xml-feed-publishing-itunes/
-
-## Site-wide Data
-- title
-- subtitle
-- description
-- image
-- link (to home page)
-
-- author
-- email
-- location
-
-- language
-- eplicit
-- rating
-- keywords
-- category
-- frequency
+Flask routes
+- / : HTML, user friendly episode display
+- /podcast.xml : rss
+- /episode/<guid>.<extension> : audio files
 
 
-## Per-episode data, for the database
+- 'scrypt' library looks good for password hashing
 
-- title
-- link (to the file)
-- pubDate
-- description
-- length (bytes)
-- format ("audio/mpeg" or  ...?)
-- itunes:duration (mm:ss)
-- itunes:image (link to image, appears optional)
-- itunes:keywords
-- itunes:explicit (yes or no)
+## Core Entities
+podcast.py
+    - SRP: only change when the definition of a podcast changes
 
-## rss
-- guid (apparently same as the link to the file)
-- itunes:summary (description)
+## Use cases (Business Rules)
 
+Admin user: CRUD
+- CRU channel
+- CRUD episodes
 
-## Database Tables
+Visitor: Read only
+- get channel
+- get episodes
 
-### episodes
-
-- id
-- title
-- published (date)
-- updated (date)
-- description
-- image (optional file)
-- explicit (bool)
+Behind the interface boundary; should provide the class definition for an interface.
 
 
-### files
-- id
-- link
-- format
-- length (bytes)
-- duration (mm:ss)
-- episode (foriegn key to episode id)
+## Interfaces and Adapters
 
-### episode_keywords
-- episode (fk)
-- keyword (fk)
+The software in the interface adapters layer is a set of adapters that convert data from the format most convenient for the use cases and entities, to the format most convenient for some external agency such as the database or the web.
 
-### keywords
-- id
-- keyword
+> You might be tempted to have these data structures contain references to Entity objects. You might think this makes sense because the Entities and the request/response models share so much data. Avoid this temptation! The purpose of these two objects is very different. Over time they will change for very different reasons, so tying them together in any way violates the Common Closure and Single Responsibility Principles. (Clean Architecture, "Request and Response Models")
 
+## Frameworks and Drivers
 
-## User layout
-
-/templates/
-    - /podcast.xml (rss template)
-    - /index.html (html home page template)
-    - /admin/index.html (list & select episodes)
-    - /admin/episode.html (edit individual episode)
-
-/settings.yml (site settings)
-/media/ (episode audio files and images)
-/static/
-    - style.css (styling)
-    - javascripts ...
-
-## Template tags
-
-podcast
-    - title
-    - link
-    - image
-    - language
-    - copyright
-    - published (|datetime("rfc822")
-    - author
-    - description
-    - subtitle
-    - email
-    - explicit
-    - keywords
-
-episodes (list of):
-    - title
-    - audio_file
-        - file_name
-        - duration (|duration)
-        - description
-        - image (optional)
-        - keywords (|episode_keywords)
-        - explicit
-        - audio_format.value
-
-
-## Admin
-
-### Create
-- /admin/episode/new GET / POST
-    - POST to create
-    - GET shows forms to fill out
-
-### Read
-- /admin/episode GET
-    - Produce link to create new episode
-    - Produce list of episodes with links to edit or delete
-
-### Update
-- /admin/episode/id GET / PUT
-    - PUT to make changes
-    - GET shows pre-filled form to fill out
-
-
-### Delete
-- /admin/episode/id DELETE
-    - Redirect to /admin/episode
+Flask & main, basically.
