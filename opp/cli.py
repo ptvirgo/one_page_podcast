@@ -6,6 +6,7 @@ import argparse
 from datetime import date
 import config
 
+
 def initialize_channel_parser(parser):
     """Prepare an argument parser so that a new channel can be initialized."""
 

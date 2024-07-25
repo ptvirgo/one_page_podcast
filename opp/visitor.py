@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from datetime import date
-
-from .podcast import *
 
 """
 Visitor use case code & interface definition.
@@ -11,13 +8,13 @@ Visitor use case code & interface definition.
 Changes to the operation of the application, that affect non-administrative visitors, would be reflected here.  However, this layer should not affect the core entities nor should it be impacted by the UI or any databases, etc.
 """
 
+
 class PodcastDatastore(ABC):
 
     @abstractmethod
     def get_channel(self):
         """Produce the podcast channel."""
         pass
-
 
     @abstractmethod
     def get_episodes(self):
@@ -36,19 +33,7 @@ class VisitPodcast:
         channel = self.loader.get_channel()
         episodes = self.loader.get_episodes()
 
-        return \
-            { "channel":
-                {
-                    "title": channel.title,
-                    "link": channel.link,
-                    "description": channel.description,
-                    "image": channel.image,
-                    "author": channel.author,
-                    "email": channel.email,
-                    "language": channel.language,
-                    "category": channel.category,
-                    "explicit": channel.explicit,
-                    "keywords": channel.keywords
-                },
-                "episodes": [ dict(ep) for ep in episodes ]
-            }
+        return {
+            "channel": dict(channel),
+            "episodes": [dict(ep) for ep in episodes]
+        }
