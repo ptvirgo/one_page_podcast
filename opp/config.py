@@ -19,7 +19,7 @@ def datastore_dir():
 
 def init_visitor():
     global VISIT_PODCAST
-    visitor_ds = jsf.VistiorDS(datastore_dir())
+    visitor_ds = jsf.VisitorDS(datastore_dir())
     VISIT_PODCAST = visitor.VisitPodcast(visitor_ds)
 
 
