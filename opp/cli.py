@@ -162,7 +162,6 @@ def delete_episode(args):
 
 
 def main():
-    global ADMIN_PODCAST
     config.init_admin()
 
     parser = argparse.ArgumentParser(description="Manage your One Page Podcast")
