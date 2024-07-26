@@ -4,7 +4,8 @@ import factory
 import factory.fuzzy
 
 from uuid import uuid4
-from opp.podcast import Channel, AudioFormat, Episode
+from pathlib import Path
+from opp.podcast import Channel, AudioFormat, Episode, audio_extension
 
 
 class ChannelFactory(factory.Factory):
@@ -30,3 +31,4 @@ class EpisodeFactory(factory.Factory):
     duration = factory.Faker("random_int")
     publication_date = factory.Faker("date_between")
     audio_format = factory.fuzzy.FuzzyChoice(AudioFormat)
+    path = factory.LazyAttribute(lambda ep: Path(str(ep.guid)) / audio_extension(ep.audio_format))

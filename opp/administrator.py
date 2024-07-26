@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import mutagen
 from uuid import uuid4
 
-from .podcast import Channel, Episode, AudioFormat
+from .podcast import Channel, AudioFormat
 
 """
 Administrator use case code & interface definition.
@@ -97,13 +97,14 @@ class AdminPodcast:
         """Save a new episode."""
 
         guid = uuid4()
-        new = Episode(title, description, guid, duration, publication_date, AudioFormat(audio_format))
-        self.datastore.create_episode(input_file_handle, new.title, new.description, str(new.guid), new.duration, new.publication_date, new.audio_format.value)
+        audio_format = AudioFormat(audio_format)  # minimal validation
 
-        return str(new.guid)
+        self.datastore.create_episode(input_file_handle, title, description, str(guid), duration, publication_date, audio_format.value)
+
+        return str(guid)
 
     def get_episodes(self):
-        """Produce an iterable of podcast.Episodes."""
+        """Produce an iterable of episode data in dicts."""
         return [dict(ep) for ep in self.datastore.get_episodes()]
 
     def update_episode(self, guid, title=None, description=None, duration=None, publication_date=None, audio_format=None):

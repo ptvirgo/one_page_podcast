@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from uuid import UUID
 
-from opp.podcast import Channel, Episode, AudioFormat
+from opp.podcast import Channel, Episode, AudioFormat, audio_extension
 
 import opp.administrator as administrator
 import opp.visitor as visitor
@@ -69,9 +69,10 @@ class TestVisitor:
 
 class AdministratorTestStore(administrator.PodcastDatastore):
 
-    def __init__(self):
+    def __init__(self, data_dir):
         self._channel = None
         self._episodes = []
+        self._episode_dir = data_dir / "episodes/"
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         self._channel = Channel(title=title, link=link, description=description, image=image, author=author, email=email, language=language, category=category, explicit=explicit, keywords=keywords)
@@ -115,7 +116,9 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
     def create_episode(self, file_handle, title, description, guid, duration, publication_date, audio_format):
         """Save a new episode."""
-        episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format))
+
+        ep_path = self.audio_file_path(guid, audio_format)
+        episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format), ep_path)
 
         self._episodes.append(episode)
         self._episodes.sort(key=lambda x: x.publication_date)
@@ -148,9 +151,14 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
         self._episodes = [ep for ep in self._episodes if ep.guid != guid]
 
+    def audio_file_path(self, guid, audio_format):
+        """Produce the path name for an episode."""
+        ext = audio_extension(audio_format)
+        return self._episode_dir / f"{guid}.{ext}"
 
-def make_admin_datastore(initialize=True, episode_count=0):
-    ds = AdministratorTestStore()
+
+def make_admin_datastore(path, initialize=True, episode_count=0):
+    ds = AdministratorTestStore(path)
 
     if initialize:
         channel = factories.ChannelFactory()
@@ -164,13 +172,17 @@ def make_admin_datastore(initialize=True, episode_count=0):
 
 
 @pytest.fixture
-def admin_store():
-    return make_admin_datastore
+def admin_store(tmp_path):
+
+    def wrapped(*args, **kwargs):
+        return make_admin_datastore(tmp_path, *args, **kwargs)
+
+    return wrapped
 
 
 @pytest.fixture
-def admin_interface():
-    datastore = make_admin_datastore()
+def admin_interface(tmp_path):
+    datastore = make_admin_datastore(tmp_path)
     admin_interface = administrator.AdminPodcast(datastore)
 
     yield admin_interface
@@ -265,9 +277,11 @@ class TestAdministrator:
 
         result = dict(datastore._episodes[select])
         result.pop("guid")
+        result.pop("path")
 
         expect = dict(new)
         expect.pop("guid")
+        expect.pop("path")
 
         assert result == expect
 
@@ -300,8 +314,8 @@ class TestAdministrator:
         for episode in datastore._episodes:
             assert episode.guid != guid
 
-    def test_extract_details(self):
-        datastore = AdministratorTestStore()
+    def test_extract_details(self, admin_store):
+        datastore = admin_store()
         admin_interface = administrator.AdminPodcast(datastore)
 
         with open(data_dir / "speech.ogg", "rb") as file:

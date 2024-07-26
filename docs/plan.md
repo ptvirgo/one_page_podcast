@@ -11,7 +11,14 @@
 Flask routes
 - / : HTML, user friendly episode display
 - /podcast.xml : rss
-- /episode/<guid>.<extension> : audio files
+- /episode/<guid> : audio files
+
+
+As visitor, I want to download the podcast audio:
+    - click the url (episode/<guid>)
+    - url guid passes from flask to VisitPodcast interface
+    - VisitPodcast produces episode details, including file path
+    - flask sends the specific file
 
 
 - 'scrypt' library looks good for password hashing

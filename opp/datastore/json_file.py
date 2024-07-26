@@ -8,6 +8,8 @@ import opp.podcast as podcast
 import opp.visitor as visitor
 import opp.administrator as adm
 
+from pathlib import Path
+
 
 OPP_JSON = "opp.json"
 EPISODE_DIR = "episodes/"
@@ -16,7 +18,7 @@ EPISODE_DIR = "episodes/"
 def data_to_episode(ep_data):
     """Convert the JSON data to an Episode object."""
 
-    episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]))
+    episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]), Path(ep_data["path"]))
     return episode
 
 
@@ -56,7 +58,7 @@ class AdminDS(adm.PodcastDatastore):
         self._opp_json = self._data_dir / OPP_JSON
         self._episode_dir = self._data_dir / EPISODE_DIR
 
-        self._episode_dir.mkdir(exist_ok=True)
+        self._episode_dir.mkdir(exist_ok=True, parents=True)
 
     def initialize_channel(self, title, link, description, image, author, email, language, category, explicit, keywords):
         """Initialize a new channel."""
@@ -130,6 +132,7 @@ class AdminDS(adm.PodcastDatastore):
             "duration": duration,
             "publication_date": publication_date.isoformat(),
             "audio_format": audio_format,
+            "path": str(audio_file_path)
         }
 
         with open(self._opp_json, "r") as file:
@@ -212,7 +215,7 @@ class AdminDS(adm.PodcastDatastore):
         select = guids.index(guid)
 
         ep = episodes.pop(select)
-        ep_path = self.audio_file_path(ep["guid"], ep["audio_format"])
+        ep_path = Path(ep["path"])
         ep_path.unlink()
 
         podcast_data["episodes"] = episodes
