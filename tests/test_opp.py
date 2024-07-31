@@ -28,6 +28,12 @@ class VisitorTestStore(visitor.PodcastDatastore):
     def get_episodes(self):
         return self.episodes
 
+    def get_episode(self, guid):
+        for ep in self.episodes:
+
+            if str(ep.guid) == guid:
+                return ep
+
 
 @pytest.fixture
 def visitor_store():
@@ -65,6 +71,13 @@ class TestVisitor:
         assert episode_result["audio_format"] == episode.audio_format.value
 
         assert len(result["episodes"]) == len(visitor_store.episodes)
+
+    def test_get_episode(self, visitor_store):
+        vp = visitor.VisitPodcast(visitor_store)
+        podcast_data = vp.podcast_data()
+
+        for episode in podcast_data["episodes"]:
+            assert vp.get_episode(episode["guid"]) == episode
 
 
 class AdministratorTestStore(administrator.PodcastDatastore):

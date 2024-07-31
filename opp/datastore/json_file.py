@@ -44,6 +44,16 @@ class VisitorDS(visitor.PodcastDatastore):
     def get_episodes(self):
         return self._episodes
 
+    def get_episode(self, guid):
+        guids = [str(ep.guid) for ep in self._episodes]
+
+        try:
+            idx = guids.index(guid)
+        except ValueError:
+            return
+
+        return self._episodes[idx]
+
     @property
     def episode_dir(self):
         return self._episode_dir

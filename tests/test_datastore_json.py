@@ -83,6 +83,11 @@ class TestVisitorDS:
         for ep in episodes:
             assert type(ep) is Episode
 
+    def test_get_episode(self, visitor_ds):
+
+        for episode in visitor_ds.get_episodes():
+            assert visitor_ds.get_episode(str(episode.guid)) == episode
+
 
 class TestAdminDS:
     """Test the AdminDS features."""
