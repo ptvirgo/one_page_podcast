@@ -21,6 +21,11 @@ class PodcastDatastore(ABC):
         """Produce an iterable of podcast episodes."""
         pass
 
+    @abstractmethod
+    def get_episode(self, guid):
+        """Produce a specific episode based on the given guid (as a string)."""
+        pass
+
 
 class VisitPodcast:
 
@@ -37,3 +42,13 @@ class VisitPodcast:
             "channel": dict(channel),
             "episodes": [dict(ep) for ep in episodes]
         }
+
+
+    def get_episode(self, guid):
+        """Produce a dict of a specific episode, from the guid."""
+        episode = self.loader.get_episode(guid)
+
+        if episode is not None:
+            return dict(episode)
+
+        return
