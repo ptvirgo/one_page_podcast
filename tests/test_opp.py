@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from uuid import UUID
 
-from opp.podcast import Channel, Episode, AudioFormat, audio_extension
+from opp.podcast import Channel, Episode, AudioFormat
 
 import opp.administrator as administrator
 import opp.visitor as visitor
@@ -130,7 +130,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
     def create_episode(self, file_handle, title, description, guid, duration, publication_date, audio_format, length):
         """Save a new episode."""
 
-        ep_path = self.audio_file_path(guid, audio_format)
+        ep_path = self._episode_dir / guid
         episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format), ep_path, length)
 
         self._episodes.append(episode)
@@ -161,13 +161,7 @@ class AdministratorTestStore(administrator.PodcastDatastore):
 
     def delete_episode(self, guid):
         """Delete an episode."""
-
         self._episodes = [ep for ep in self._episodes if ep.guid != guid]
-
-    def audio_file_path(self, guid, audio_format):
-        """Produce the path name for an episode."""
-        ext = audio_extension(audio_format)
-        return self._episode_dir / f"{guid}.{ext}"
 
 
 def make_admin_datastore(path, initialize=True, episode_count=0):

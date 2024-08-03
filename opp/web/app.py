@@ -10,8 +10,22 @@ config.init_visitor()
 app = flask.Flask(__name__)
 
 
-@app.route("/episode/<guid>", methods=["GET", "HEAD"])
-def download_episode(guid):
+def download_extension(audio_mimetype):
+    "Produce a file extension from the given mime type."
+
+    # DRY suggests that this belongs in opp.podcast, but SRP suggests that would cause unwanted interdependencies.
+
+    if audio_mimetype == "audio/ogg":
+        return "opus"  # not a typo
+
+    if audio_mimetype == "audio/vorbis":
+        return "ogg"
+
+    return "mp3"
+
+
+@app.route("/episode/<guid>.<ext>", methods=["GET", "HEAD"])
+def download_episode(guid, ext="mp3"):
     """Produce the audio file for a given episode."""
 
     try:
@@ -48,5 +62,13 @@ def podcast_image():
 @app.route("/rss.xml")
 def rss():
     data = config.VISIT_PODCAST.podcast_data()
-    xml = flask.render_template("podcast.xml", channel=data["channel"], episodes=data["episodes"])
+
+    channel = data["channel"]
+    episodes = data["episodes"]
+
+    for ep in episodes:
+        ep["url"] = app.url_for("download_episode", guid=ep["guid"], ext=download_extension(ep["audio_format"]), _external=True)
+
+    xml = flask.render_template("podcast.xml", channel=channel, episodes=episodes)
+
     return flask.Response(xml, mimetype="application/rss+xml")

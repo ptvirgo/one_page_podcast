@@ -50,23 +50,6 @@ class AudioFormat(enum.Enum):
     OggVorbis = "audio/vorbis"
 
 
-def audio_extension(af):
-    """Produce the filename extension for a given AudioFormat"""
-
-    if type(af) is str:
-        af = AudioFormat(af)
-
-    assert type(af) is AudioFormat
-
-    if af == AudioFormat.OggOpus:
-        return "opus"  # Looks wrong, but not.
-
-    if af == AudioFormat.OggVorbis:
-        return "ogg"
-
-    return "mp3"
-
-
 class Episode:
     def __init__(self, title, description, guid, duration, publication_date, audio_format, path, length):
         """Describe an episode."""

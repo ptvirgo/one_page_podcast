@@ -27,11 +27,11 @@
             <itunes:summary>{{ episode.description }}</itunes:summary>
             <pubDate>{{ episode.publication_date }}</pubDate>
 
-            <link>{{ url_for('download_episode', guid=episode.guid, _external=True) }}</link>
-            <guid>{{ url_for('download_episode', guid=episode.guid, _external=True) }}</guid>
-            <enclosure url="{{ url_for('download_episode', guid=episode.guid, _external=True) }}" length="{{ episode.length }}" type="{{ episode.audio_format }}"/>
+            <link>{{ episode.url }}</link>
+            <guid>{{ episode.url }}</guid>
+            <enclosure url="{{ episode.url }}" length="{{ episode.length }}" type="{{ episode.audio_format }}"/>
         </item>
-        {%- endfor %}
+        {% endfor -%}
 
     </channel>
 </rss>

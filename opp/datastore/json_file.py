@@ -161,7 +161,18 @@ class AdminDS(adm.PodcastDatastore):
 
     def audio_file_path(self, guid, audio_format):
         """Produce the path name for an episode."""
-        ext = podcast.audio_extension(audio_format)
+
+        af = podcast.AudioFormat(audio_format)
+
+        if af == podcast.AudioFormat.OggOpus:
+            ext = "opus"  # Looks wrong, but not.
+
+        elif af == podcast.AudioFormat.OggVorbis:
+            ext = "ogg"
+
+        else:
+            ext = "mp3"
+
         return self._episode_dir / f"{guid}.{ext}"
 
     def get_episodes(self):
