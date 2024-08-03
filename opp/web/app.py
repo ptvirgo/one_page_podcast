@@ -39,6 +39,7 @@ def download_episode(guid, ext="mp3"):
         return flask.Response(response="Episode not found", status=404)
 
     result = flask.send_file(episode["path"], mimetype=episode["audio_format"])
+    result.accept_ranges = "bytes"
 
     if flask.request.method == "HEAD" or flask.request.method == "GET":
         return result

@@ -11,24 +11,11 @@
 Flask routes
 - / : HTML, user friendly episode display
 - /podcast.xml : rss
-    - episode length as bytes
     - (maybe) episode keywords
     - add / improve [xml tags](https://github.com/Podcast-Standards-Project/PSP-1-Podcast-RSS-Specification?tab=readme-ov-file#required-channel-elements):
         - copyright
         - subtitle
 - [Validate](https://podba.se/validate/)
-
-Network / Apple stuff
-- HTTP Head requests - looks like Flask handles this
-- Byte range support
-- File extensions
-
-As visitor, I want to download the podcast audio:
-    - click the url (episode/<guid>)
-    - url guid passes from flask to VisitPodcast interface
-    - VisitPodcast produces episode details, including file path
-    - flask sends the specific file
-
 
 - 'scrypt' library looks good for password hashing
 
