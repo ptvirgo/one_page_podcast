@@ -2,9 +2,8 @@
 
 ## TODO:
 
-1. Audio files are downloadable
-2. RSS
-3. HTML front end
+1. HTML front end
+1. Validate RSS
 
 ### Web interface
 
