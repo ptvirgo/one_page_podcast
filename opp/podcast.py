@@ -68,7 +68,7 @@ def audio_extension(af):
 
 
 class Episode:
-    def __init__(self, title, description, guid, duration, publication_date, audio_format, path):
+    def __init__(self, title, description, guid, duration, publication_date, audio_format, path, length):
         """Describe an episode."""
 
         self.title = title
@@ -78,6 +78,7 @@ class Episode:
         self.publication_date = publication_date
         self.audio_format = audio_format
         self.path = path
+        self.length = length
 
     def __iter__(self):
         return \
@@ -88,7 +89,8 @@ class Episode:
                 ("duration", self.duration),
                 ("publication_date", self.publication_date.isoformat()),
                 ("audio_format", self.audio_format.value),
-                ("path", self.path)
+                ("path", self.path),
+                ("length", self.length)
             ])
 
     def __eq__(self, other):

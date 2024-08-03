@@ -32,3 +32,4 @@ class EpisodeFactory(factory.Factory):
     publication_date = factory.Faker("date_between")
     audio_format = factory.fuzzy.FuzzyChoice(AudioFormat)
     path = factory.LazyAttribute(lambda ep: Path(str(ep.guid)) / audio_extension(ep.audio_format))
+    length = factory.fuzzy.FuzzyInteger(5000, 25000)

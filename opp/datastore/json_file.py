@@ -18,7 +18,7 @@ EPISODE_DIR = "episodes/"
 def data_to_episode(ep_data):
     """Convert the JSON data to an Episode object."""
 
-    episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]), Path(ep_data["path"]))
+    episode = podcast.Episode(ep_data["title"], ep_data["description"], uuid.UUID(ep_data["guid"]), ep_data["duration"], date.fromisoformat(ep_data["publication_date"]), podcast.AudioFormat(ep_data["audio_format"]), Path(ep_data["path"]), ep_data["length"])
     return episode
 
 
@@ -127,7 +127,7 @@ class AdminDS(adm.PodcastDatastore):
         with open(self._opp_json, "w") as file:
             json.dump(podcast_data, file)
 
-    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format, length):
         """Save a new episode."""
 
         audio_file_path = self.audio_file_path(guid, audio_format)
@@ -142,7 +142,8 @@ class AdminDS(adm.PodcastDatastore):
             "duration": duration,
             "publication_date": publication_date.isoformat(),
             "audio_format": audio_format,
-            "path": str(audio_file_path)
+            "path": str(audio_file_path),
+            "length": length
         }
 
         with open(self._opp_json, "r") as file:

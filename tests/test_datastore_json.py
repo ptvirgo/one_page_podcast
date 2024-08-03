@@ -37,7 +37,7 @@ def initialize_admin_ds(ds, episodes=3):
         ep = factories.EpisodeFactory()
 
         with open(audio_file(ep.audio_format), "rb") as file:
-            ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+            ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value, ep.length)
 
 
 @pytest.fixture
@@ -162,7 +162,7 @@ class TestAdminDS:
             episodes.append(ep)
 
             with open(audio_file(ep.audio_format), "rb") as file:
-                ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+                ds.create_episode(file, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value, ep.length)
 
         episodes.sort(key=lambda ep: ep.publication_date, reverse=True)
         results = ds.get_episodes()

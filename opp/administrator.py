@@ -33,7 +33,7 @@ class PodcastDatastore(ABC):
         pass
 
     @abstractmethod
-    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, guid, duration, publication_date, audio_format, length):
         """Save a new episode."""
         pass
 
@@ -93,13 +93,13 @@ class AdminPodcast:
 
         self.datastore.update_channel(title=new.title, link=new.link, description=new.description, image=new.image, author=new.author, email=new.email, language=new.language, category=new.category, explicit=new.explicit, keywords=new.keywords)
 
-    def create_episode(self, input_file_handle, title, description, duration, publication_date, audio_format):
+    def create_episode(self, input_file_handle, title, description, duration, publication_date, audio_format, length):
         """Save a new episode."""
 
         guid = uuid4()
         audio_format = AudioFormat(audio_format)  # minimal validation
 
-        self.datastore.create_episode(input_file_handle, title, description, str(guid), duration, publication_date, audio_format.value)
+        self.datastore.create_episode(input_file_handle, title, description, str(guid), duration, publication_date, audio_format.value, length)
 
         return str(guid)
 
@@ -120,9 +120,9 @@ class AdminPodcast:
         """
         Attempt to extract the following from an audio file:
         - duration
-        - length
         - audio format
         - description
+        - length
         """
 
         audio_file = mutagen.File(filehandle)
@@ -149,7 +149,7 @@ class AdminPodcast:
 
         return {"audio_format": audio_format.value,
                 "duration": duration,
-                "length": length,
                 "title": str(title),
-                "description": str(description)
+                "description": str(description),
+                "length": length,
                 }

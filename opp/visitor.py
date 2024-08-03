@@ -43,7 +43,6 @@ class VisitPodcast:
             "episodes": [dict(ep) for ep in episodes]
         }
 
-
     def get_episode(self, guid):
         """Produce a dict of a specific episode, from the guid."""
         episode = self.loader.get_episode(guid)

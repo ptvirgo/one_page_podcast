@@ -111,7 +111,7 @@ def create_episode(args):
         publication_date = date.fromisoformat(publication_date_string)
 
     with open(args.file, "rb") as file:
-        admin_podcast.create_episode(file, title, description, details["duration"], publication_date, details["audio_format"])
+        admin_podcast.create_episode(file, title, description, details["duration"], publication_date, details["audio_format"], details["length"])
 
 
 def list_episode_parser(parser):

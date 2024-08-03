@@ -1,0 +1,38 @@
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <link>{{ channel.link }}</link>
+        <atom:link href="{{ url_for('rss') }}" rel="self" type="application/rss+xml"/>
+        <title>{{ channel.title }}</title>
+        <description>{{ channel.description }}</description>
+        <language>{{ channel.language }}</language>
+        <copyright>{{ channel.author }}</copyright>
+
+        {% if channel.image -%}
+        <image>
+            <url>{{ url_for('channel', _external=True) }}</url>
+            <title>{{ channel.title }}</title>
+            <link>{{ channel.link }}</link>
+        </image>
+        <itunes:image href="{{ url_for('channel', _external=True) }}"/>
+        {% endif -%}
+
+        <itunes:explicit>{% if channel.explicit %}yes{% else %}no{% endif %}</itunes:explicit>
+        <itunes:category text="{{ channel.category }}"/>
+
+        {% for episode in episodes -%}
+        <item>
+            <title>{{ episode.title }}</title>
+            <description>{{ episode.description }}</description>
+            <itunes:duration>{{ episode.duration }}</itunes:duration>
+            <itunes:summary>{{ episode.description }}</itunes:summary>
+            <pubDate>{{ episode.publication_date }}</pubDate>
+
+            <link>{{ url_for('download_episode', guid=episode.guid, _external=True) }}</link>
+            <guid>{{ url_for('download_episode', guid=episode.guid, _external=True) }}</guid>
+            <enclosure url="{{ url_for('download_episode', guid=episode.guid, _external=True) }}" length="{{ episode.length }}" type="{{ episode.audio_format }}"/>
+        </item>
+        {%- endfor %}
+
+    </channel>
+</rss>
+

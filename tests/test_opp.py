@@ -127,11 +127,11 @@ class AdministratorTestStore(administrator.PodcastDatastore):
         if type(keywords) is list:
             self._channel.keywords = keywords
 
-    def create_episode(self, file_handle, title, description, guid, duration, publication_date, audio_format):
+    def create_episode(self, file_handle, title, description, guid, duration, publication_date, audio_format, length):
         """Save a new episode."""
 
         ep_path = self.audio_file_path(guid, audio_format)
-        episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format), ep_path)
+        episode = Episode(title, description, UUID(guid), duration, publication_date, AudioFormat(audio_format), ep_path, length)
 
         self._episodes.append(episode)
         self._episodes.sort(key=lambda x: x.publication_date)
@@ -179,7 +179,7 @@ def make_admin_datastore(path, initialize=True, episode_count=0):
 
         for i in range(episode_count):
             ep = factories.EpisodeFactory()
-            ds.create_episode(None, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value)
+            ds.create_episode(None, ep.title, ep.description, str(ep.guid), ep.duration, ep.publication_date, ep.audio_format.value, ep.length)
 
     return ds
 
@@ -283,7 +283,7 @@ class TestAdministrator:
         admin_interface = administrator.AdminPodcast(datastore)
         new = factories.EpisodeFactory()
 
-        guid = admin_interface.create_episode(None, new.title, new.description, new.duration, new.publication_date, new.audio_format.value)
+        guid = admin_interface.create_episode(None, new.title, new.description, new.duration, new.publication_date, new.audio_format.value, new.length)
 
         guids = [str(ep.guid) for ep in datastore._episodes]
         select = guids.index(guid)
