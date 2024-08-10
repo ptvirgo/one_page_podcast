@@ -2,8 +2,11 @@
 
 ## TODO:
 
-1. HTML front end
-1. Validate RSS
+1. Delete stale code.
+1. Add custom CSS path via config.
+1. Document usage.
+1. Validate RSS.
+1. Web admin.
 
 ### Web interface
 
