@@ -2,63 +2,18 @@
 
 You want to host your own Podcast.  You don't need anything else.
 
-The goal is to prepare a solution that is simple and effective for people who
-are technically savvy, while minimizing the actual effort required to get up
-and running.
-
 ## Status
 
-Minimally complete solution for serving a Podcast page.  
+Minimally complete solution for serving a Podcast page.
 
 
-## Templates
+## Clean Architecture
 
-It should be easy to make new OPP templates with a basic knowledge of HTML, CSS
-and [Jinja templates](https://jinja.palletsprojects.com/).
+The code follows basic principles of [Clean Architecture](https://www.oreilly.com/library/view/clean-architecture-a/9780134494272/), as outlined by Bob Martin, so that it is easy to understand and extend, and the central functions can be maintained independently from the environment.
 
-### Directory structure
+### Layres
 
-A new template must be stored in the site-wide template directory. As a Flask
-app, OPP expects templates and related static content to be in separate
-directories, as follows.
-
-- templates/
-    - admin/\* *# admin templates, required and not to be altered*
-    - your_template/index.html *# A jinja template that will render the front page*
-- static/
-    - admin/\* *# admin static files, required and not to be altered*
-    - your_template/\* *# any css, image, or js files you wish to include*
-
-This structure will allow an OPP admin to activate your template simply by
-storing the associated files and setting their *template name* setting to
-*your_template.*
-
-
-### Tags
-
-OPP delivers the following tags to the template.
-
-- **podcast** # Details about the podcast
-    - **title**
-    - **subtitle**
-    - **description**
-    - **image** # A file-name for the podcast's main image.  For the url, use `{{ url_for('media', filename=podcast.image) }}`
-    - **link** # URL for the podcast, as expected by the rss template
-    - **author** # The podcast author's name
-    - **email** # The podcast author's contact email
-    - **language** # Language code, likely "en"
-    - **explicit** # Boolean
-    - **keywords** # A list of keywords for the podcast.
-    - **category** # The podcast category
-
-- **episodes** is a list of:
-    - **title**
-    - **description**
-    - **image** # optional image filename, typical use: `{{ url_for('media', filename=episode.image) }}`
-    - **keywords** # Keywords - comma separated: `{{ episode.keywords|episode_keywords }}` or access the `word` attribute of each.
-    - **published** # publication date.  Typical formatting `{{ episode.published|datetime }}`
-    - **explicit** # Boolean
-    - **audio_file** # data about the audio file, contains:
-        - **duration** # Duration in seconds.  Translate to hours, minutes, seconds via `{{ episode.audio_file.duration|duration }}`
-        - **filename** # For the url: `{{ url_for('media', filename=episode.audio_file.file_name, _external=True) }}`
-        - **mimetype** # The mimetype, as needed for inline playback
+- opp.podcast describes the core entities
+- opp.administrator and opp.visitor provide interface adaptors for the primary use-cases. Because it's just a basic podcast with little more than CRUD use-cases, there is not a separate layer of "business rules," although it would be simple to create one if needed. Abstract interfaces in this layer provide a dependency inversion for data storage interface adapters.
+- opp.datastore contains an interface adapter for basic data storage.
+- opp.web, opp.cli, and opp.config comprise components of the outermost framework / driver layer.  Of note, both the Flask web interface and the cli rely on the use cases and framework adapters to execute use-case functions; they do not have access or cause dependencies for those layers. In effect they are plug-ins for the core application.

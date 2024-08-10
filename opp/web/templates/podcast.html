@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>{{ channel.title }}</title>
+  </head>
+
+  <body>
+
+    {% if channel.image -%}
+    <img src="{{ channel.image }}" />
+    {% endif -%}
+    <h1>{{ channel.title }}</h1>
+    {{ channel.description }}
+
+
+    {% for episode in episodes -%}
+    <h2>{{ episode.title }}</h2>
+    <p class="date">{{ episode.publication_date }}</p>
+    {{ episode.description }}
+    <p><a href="{{ episode.url }}">Download</a></p>
+    {% endfor -%}
+
+  </body>
+</html>

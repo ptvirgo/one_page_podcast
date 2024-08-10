@@ -24,6 +24,23 @@ def download_extension(audio_mimetype):
     return "mp3"
 
 
+def episodes_with_urls(episodes):
+    "Pdocuce episodes but with url."
+
+    for ep in episodes:
+        url = app.url_for("download_episode", guid=ep["guid"], ext=download_extension(ep["audio_format"]), _external=True)
+        yield dict(ep, url=url)
+
+
+@app.route("/")
+def home():
+    data = config.VISIT_PODCAST.podcast_data()
+    channel = data["channel"]
+    episodes = data["episodes"]
+
+    return flask.render_template("podcast.html", channel=channel, episodes=episodes_with_urls(episodes))
+
+
 @app.route("/episode/<guid>.<ext>", methods=["GET", "HEAD"])
 def download_episode(guid, ext="mp3"):
     """Produce the audio file for a given episode."""
@@ -67,9 +84,6 @@ def rss():
     channel = data["channel"]
     episodes = data["episodes"]
 
-    for ep in episodes:
-        ep["url"] = app.url_for("download_episode", guid=ep["guid"], ext=download_extension(ep["audio_format"]), _external=True)
-
-    xml = flask.render_template("podcast.xml", channel=channel, episodes=episodes)
+    xml = flask.render_template("podcast.xml", channel=channel, episodes=episodes_with_urls(episodes))
 
     return flask.Response(xml, mimetype="application/rss+xml")
