@@ -126,7 +126,17 @@ class AdminPodcast:
         """
 
         audio_file = mutagen.File(filehandle)
-        audio_format = AudioFormat(audio_file.mime[0])
+
+        format_name = audio_file.mime[0]
+
+        if format_name == "audio/vorbis":
+            audio_format = AudioFormat.OggVorbis
+
+        elif format_name == "audio/ogg":
+            audio_format = AudioFormat.OggOpus
+
+        else:
+            audio_format = AudioFormat.MP3
 
         duration = round(audio_file.info.length)
 

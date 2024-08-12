@@ -4,7 +4,7 @@
 import argparse
 
 from datetime import date
-import config
+import opp.config as config
 
 
 def initialize_channel_parser(parser):

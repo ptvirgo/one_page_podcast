@@ -45,9 +45,9 @@ class Channel:
 
 
 class AudioFormat(enum.Enum):
-    MP3 = "audio/mp3"
-    OggOpus = "audio/ogg"  # Not a typo
-    OggVorbis = "audio/vorbis"
+    MP3 = "mp3"
+    OggOpus = "opus"  # Not a typo
+    OggVorbis = "vorbis"
 
 
 class Episode:
