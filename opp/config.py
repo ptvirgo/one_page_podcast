@@ -28,3 +28,9 @@ def init_admin():
 
     admin_ds = jsf.AdminDS(datastore_dir())
     ADMIN_PODCAST = administrator.AdminPodcast(admin_ds)
+
+
+def css_file():
+    "Produce path for a custom css file."
+    directory = datastore_dir()
+    return directory / "web/style.css"

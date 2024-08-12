@@ -69,7 +69,7 @@ def download_episode(guid, ext="mp3"):
     episode = config.VISIT_PODCAST.get_episode(guid)
 
     if not episode:
-        return flask.Response(response="Episode not found", status=404)
+        return flask.Response(response="Not found", status=404)
 
     result = flask.send_file(episode["path"], mimetype=mime_type(episode["audio_format"]))
     result.accept_ranges = "bytes"
@@ -103,3 +103,15 @@ def rss():
     xml = flask.render_template("podcast.xml", channel=channel, episodes=episodes)
 
     return flask.Response(xml, mimetype="application/rss+xml")
+
+
+@app.route("/style.css")
+def css():
+    """Produce the custom css, if available."""
+
+    css = config.css_file()
+
+    if css.exists():
+        flask.send_file(css, mimetype="text/css")
+
+    return flask.Response(response="Not found", status=404)
